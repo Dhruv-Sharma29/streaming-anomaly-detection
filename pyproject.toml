@@ -1,0 +1,24 @@
+[project]
+name = "streaming-anomaly"
+version = "0.1.0"
+description = "Streaming anomaly detection with crash recovery (portfolio project 05)"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "confluent-kafka>=2.6",
+    "psycopg[binary]>=3.2",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "httpx>=0.27",
+    "scikit-learn>=1.5",
+    "numpy>=1.26",
+]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.uv]
+package = false
