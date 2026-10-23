@@ -1,0 +1,116 @@
+{
+ "ewma_dev": {
+  "runs": 20,
+  "anomalies": 100,
+  "alerts": 89,
+  "detected": 89,
+  "precision": 1.0,
+  "recall": 0.89,
+  "f1": 0.942,
+  "false_alerts": 0,
+  "false_alerts_in_benign_shift": 0,
+  "delay_s_median": 20.0,
+  "delay_s_p90": 30.0,
+  "recall_by_kind": {
+   "error_burst": "15/20",
+   "latency_drift": "16/20",
+   "latency_spike": "19/20",
+   "outage": "20/20",
+   "queue_growth": "19/20"
+  },
+  "recall_by_severity": {
+   "0.0-0.2": "11/21",
+   "0.2-0.4": "24/25",
+   "0.4-0.6": "20/20",
+   "0.6-0.8": "11/11",
+   "0.8-1.0": "23/23"
+  }
+ },
+ "ewma_heldout": {
+  "runs": 30,
+  "anomalies": 150,
+  "alerts": 140,
+  "detected": 140,
+  "precision": 1.0,
+  "recall": 0.933,
+  "f1": 0.966,
+  "false_alerts": 0,
+  "false_alerts_in_benign_shift": 0,
+  "delay_s_median": 20.0,
+  "delay_s_p90": 30.0,
+  "recall_by_kind": {
+   "error_burst": "27/30",
+   "latency_drift": "25/30",
+   "latency_spike": "29/30",
+   "outage": "30/30",
+   "queue_growth": "29/30"
+  },
+  "recall_by_severity": {
+   "0.0-0.2": "14/23",
+   "0.2-0.4": "32/33",
+   "0.4-0.6": "26/26",
+   "0.6-0.8": "37/37",
+   "0.8-1.0": "31/31"
+  }
+ },
+ "static_params": {
+  "latency_x": 1.5,
+  "error_rate": 0.02,
+  "queue_x": 1.5
+ },
+ "static_dev": {
+  "runs": 20,
+  "anomalies": 100,
+  "alerts": 95,
+  "detected": 95,
+  "precision": 1.0,
+  "recall": 0.95,
+  "f1": 0.974,
+  "false_alerts": 0,
+  "false_alerts_in_benign_shift": 0,
+  "delay_s_median": 20.0,
+  "delay_s_p90": 30.0,
+  "recall_by_kind": {
+   "error_burst": "19/20",
+   "latency_drift": "18/20",
+   "latency_spike": "19/20",
+   "outage": "20/20",
+   "queue_growth": "19/20"
+  },
+  "recall_by_severity": {
+   "0.0-0.2": "16/21",
+   "0.2-0.4": "25/25",
+   "0.4-0.6": "20/20",
+   "0.6-0.8": "11/11",
+   "0.8-1.0": "23/23"
+  }
+ },
+ "static_heldout": {
+  "runs": 30,
+  "anomalies": 150,
+  "alerts": 146,
+  "detected": 145,
+  "precision": 0.993,
+  "recall": 0.967,
+  "f1": 0.98,
+  "false_alerts": 1,
+  "false_alerts_in_benign_shift": 0,
+  "delay_s_median": 20.0,
+  "delay_s_p90": 30.0,
+  "recall_by_kind": {
+   "error_burst": "29/30",
+   "latency_drift": "27/30",
+   "latency_spike": "29/30",
+   "outage": "30/30",
+   "queue_growth": "30/30"
+  },
+  "recall_by_severity": {
+   "0.0-0.2": "18/23",
+   "0.2-0.4": "33/33",
+   "0.4-0.6": "26/26",
+   "0.6-0.8": "37/37",
+   "0.8-1.0": "31/31"
+  }
+ },
+ "emission_extra_delay_s": 30.0
+}

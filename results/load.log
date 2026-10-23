@@ -1,0 +1,41 @@
+{
+ "run_id": "20261006T103713Z-capacity",
+ "mode": "capacity",
+ "records": 635369,
+ "accepted": 620266,
+ "produce": {
+  "records": 635369,
+  "seconds": 2.12,
+  "records_per_s": 299451.6
+ },
+ "drain_s": 4.1,
+ "accepted_events_per_s": 150739,
+ "records_per_s": 154410,
+ "exact": true,
+ "max_backpressure_ratio_by_vertex": {},
+ "backpressure_samples": 0
+}
+{
+ "run_id": "20261006T103730Z-latency-flush-on-checkpoint",
+ "mode": "latency",
+ "label": "flush-on-checkpoint",
+ "speed": 10.0,
+ "sink_flush_ms": 0,
+ "exact": true,
+ "windows": 240,
+ "latency_ms_p50": 1453,
+ "latency_ms_p95": 2468,
+ "latency_ms_max": 3434
+}
+{
+ "run_id": "20261006T103853Z-latency-flush-200ms",
+ "mode": "latency",
+ "label": "flush-200ms",
+ "speed": 10.0,
+ "sink_flush_ms": 200,
+ "exact": true,
+ "windows": 240,
+ "latency_ms_p50": 293,
+ "latency_ms_p95": 1035,
+ "latency_ms_max": 1787
+}

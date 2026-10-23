@@ -1,0 +1,28 @@
+{
+ "run_id": "20261006T101957Z-s8-taskmanager-7919",
+ "label": "tm-crash",
+ "seed": 8,
+ "crash": "taskmanager",
+ "crash_at": 0.8,
+ "cut_before_very_late": false,
+ "cut_index": 40828,
+ "records": 51035,
+ "crash_info": {
+  "recovery_s": 9.4,
+  "running_after_restart_s": 6.3
+ },
+ "settle_s": 1.0,
+ "window_writes": 635,
+ "windows_expected": 240,
+ "windows_got": 240,
+ "windows_missing": 0,
+ "windows_extra": 0,
+ "windows_mismatched": 0,
+ "late_match": true,
+ "dlq_match": true,
+ "alerts_match": true,
+ "alerts_expected": 5,
+ "alerts_got": 5,
+ "window_operator_late": 0,
+ "exact": true
+}
