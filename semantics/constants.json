@@ -1,0 +1,34 @@
+{
+  "window_ms": 10000,
+  "watermark_bound_ms": 5000,
+  "allowed_lateness_ms": 30000,
+  "dedup_horizon_ms": 300000,
+  "decision_margin_ms": 15000,
+  "error_status_min": 500,
+  "accepted_schema_versions": [
+    1,
+    2
+  ],
+  "flush_service": "__flush__",
+  "detector": {
+    "alpha": 0.1,
+    "warmup_windows": 6,
+    "z_threshold": 4.0,
+    "open_after": 2,
+    "close_after": 3,
+    "std_floor": {
+      "latency_p95_ms": {
+        "abs": 5.0,
+        "rel": 0.1
+      },
+      "error_rate": {
+        "abs": 0.01,
+        "rel": 0.0
+      },
+      "queue_depth_max": {
+        "abs": 2.0,
+        "rel": 0.1
+      }
+    }
+  }
+}
