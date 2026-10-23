@@ -4,6 +4,13 @@
     python -m eval.run_pipeline --seed 2 --crash taskmanager --at 0.4     # SIGKILL TM at 40% of input
     python -m eval.run_pipeline --seed 3 --crash job --at 0.5             # cancel job, resume from checkpoint
     python -m eval.run_pipeline --seed 4 --crash postgres --at 0.5        # sink database restarts
+    python -m eval.run_pipeline --seed 5 --crash taskmanager --at 0.5 --inflight   # crash while input flows
+
+By default the failure is injected 8 s after the input before the cut was produced, so the job is
+idle and a completed checkpoint covers everything it has seen. --inflight produces the whole input
+in the background and injects the failure while records are still arriving: records after the last
+completed checkpoint, some of them already written to the sink, have to be replayed. The run
+records the checkpoint state and the sink writes at the moment of the crash.
 
 Each run uses a fresh topic and consumer group. Comparison is exact: final windows, first-firing
 alerts, late-dropped event ids, dead-letter counts by reason. One JSON line per run goes to
@@ -17,6 +24,7 @@ import json
 import subprocess
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -108,6 +116,17 @@ def latest_checkpoint(job_id: str) -> str | None:
     info = httpx.get(f"{stack.FLINK_URL}/jobs/{job_id}/checkpoints", timeout=5).json()
     completed = (info.get("latest") or {}).get("completed")
     return completed["external_path"] if completed else None
+
+
+def checkpoint_state(job_id: str) -> dict:
+    """What a crash right now would lose: in-progress checkpoints and the age of the last completed one."""
+    info = httpx.get(f"{stack.FLINK_URL}/jobs/{job_id}/checkpoints", timeout=5).json()
+    completed = (info.get("latest") or {}).get("completed") or {}
+    now_ms = time.time() * 1000
+    return {"checkpoints_in_progress": info.get("counts", {}).get("in_progress"),
+            "last_completed_id": completed.get("id"),
+            "since_last_completed_s": round((now_ms - completed["latest_ack_timestamp"]) / 1000, 2)
+            if completed.get("latest_ack_timestamp") else None}
 
 
 def wait_checkpoint(job_id: str, timeout_s: float = 60) -> str:
@@ -225,7 +244,7 @@ def cut_index(records: list[dict], at: float, before_very_late: bool) -> int:
 
 
 def run_once(seed: int, crash_kind: str | None, at: float, rate: float, duration_s: int, label: str,
-             before_very_late: bool = False) -> dict:
+             before_very_late: bool = False, inflight: bool = False) -> dict:
     run_id = f"{datetime.now(UTC):%Y%m%dT%H%M%SZ}-s{seed}-{crash_kind or 'clean'}-{uuid.uuid4().hex[:4]}"
     topic, group = f"events-{run_id}", f"pipeline-{run_id}"
     meta, records = generate(Config(seed=seed, duration_s=duration_s))
@@ -240,17 +259,27 @@ def run_once(seed: int, crash_kind: str | None, at: float, rate: float, duration
         wait_running(job_id)
         check_ordering_chain(job_id)
         cut = cut_index(records, at, before_very_late) if crash_kind else len(records)
-        produced = [produce(records[:cut], topic, rate)]
         crash_info = None
-        if crash_kind:
-            time.sleep(8)  # input before the cut is consumed and covered by a completed checkpoint (3 s interval)
-            job_id, crash_info = crash(crash_kind, job_id, topic, group)
-            produced.append(produce(records[cut:], topic, rate))
+        if crash_kind and inflight:
+            with ThreadPoolExecutor(1) as pool:
+                producing = pool.submit(produce, records, topic, rate)
+                time.sleep(cut / rate)   # produce() paces at `rate`, so about `cut` records are out
+                at_crash = {**checkpoint_state(job_id), "sink_window_writes": read_results()["window_writes"],
+                            "producer_running": not producing.done()}
+                job_id, crash_info = crash(crash_kind, job_id, topic, group)
+                crash_info = {**crash_info, "at_crash": at_crash}
+                produced = [producing.result()]
+        else:
+            produced = [produce(records[:cut], topic, rate)]
+            if crash_kind:
+                time.sleep(8)  # input before the cut is consumed and covered by a completed checkpoint (3 s interval)
+                job_id, crash_info = crash(crash_kind, job_id, topic, group)
+                produced.append(produce(records[cut:], topic, rate))
         got, cmp, settle_s = wait_settled(expected, expected_alerts, timeout_s=300)
     finally:
         cancel(job_id)
     return {"run_id": run_id, "label": label, "seed": seed, "crash": crash_kind, "crash_at": at if crash_kind else None,
-            "cut_before_very_late": before_very_late, "cut_index": cut,
+            "cut_before_very_late": before_very_late, "inflight": inflight, "cut_index": cut,
             "records": len(records), "produce": produced, "crash_info": crash_info, "settle_s": round(settle_s, 1),
             "window_writes": got["window_writes"], **cmp}
 
@@ -263,11 +292,16 @@ def main() -> None:
     p.add_argument("--rate", type=float, default=4000, help="records/s produced")
     p.add_argument("--duration-s", type=int, default=600)
     p.add_argument("--label", default="")
+    p.add_argument("--inflight", action="store_true",
+                   help="inject the failure while the input is still being produced (no idle wait)")
     p.add_argument("--before-very-late", action="store_true",
                    help="move the crash point to just before a very-late event (adversarial restore test)")
     args = p.parse_args()
     stack.up()
-    result = run_once(args.seed, args.crash, args.at, args.rate, args.duration_s, args.label, args.before_very_late)
+    if args.inflight and (not args.crash or args.before_very_late):
+        p.error("--inflight needs --crash and does not combine with --before-very-late")
+    result = run_once(args.seed, args.crash, args.at, args.rate, args.duration_s, args.label, args.before_very_late,
+                      args.inflight)
     out = ROOT / "results/raw/pipeline_runs.jsonl"
     out.parent.mkdir(parents=True, exist_ok=True)
     with open(out, "a") as f:

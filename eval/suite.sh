@@ -25,3 +25,13 @@ run --seed 13 --crash postgres --at 0.4 --label sink-db-restart
 run --seed 14 --crash postgres --at 0.7 --label sink-db-restart
 run --seed 15 --crash taskmanager --at 0.35 --label tm-crash
 run --seed 16 --crash job --at 0.55 --before-very-late --label job-restore-adversarial
+# In-flight failures: the input keeps arriving while the failure happens, so records after the last
+# completed checkpoint (some already written to the sink) must be replayed (eval/run_pipeline.py --inflight).
+run --seed 21 --crash taskmanager --at 0.3 --inflight --label tm-crash-inflight
+run --seed 22 --crash taskmanager --at 0.5 --inflight --label tm-crash-inflight
+run --seed 23 --crash taskmanager --at 0.8 --inflight --label tm-crash-inflight
+run --seed 24 --crash job --at 0.3 --inflight --label job-restore-inflight
+run --seed 25 --crash job --at 0.5 --inflight --label job-restore-inflight
+run --seed 26 --crash job --at 0.8 --inflight --label job-restore-inflight
+run --seed 27 --crash postgres --at 0.4 --inflight --label sink-db-restart-inflight
+run --seed 28 --crash postgres --at 0.7 --inflight --label sink-db-restart-inflight
