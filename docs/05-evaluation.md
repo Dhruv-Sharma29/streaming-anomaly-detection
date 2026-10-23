@@ -171,8 +171,20 @@ consistent with them (4 services × rate × duration, plus faults and benign tra
 | Latency (v1 file), 10× replay, flush only on full batch / before checkpoint | 240 windows | p50 1.45 s, p95 2.47 s, max 3.43 s | yes |
 | Latency (v1 file), 10× replay, also flush every 200 ms | 240 windows | p50 0.29 s, p95 1.04 s, max 1.79 s | yes |
 
-Capacity v2 sampled every vertex 6 times. `max_backpressured` is 0.0 and `max_busy` 1.0 on all of
-them. The single ordered chain is saturated and nothing upstream of it is waiting. Latency is
+Capacity v2 sampled every vertex 6 times and saw `max_backpressured` 0.0 everywhere. That was a
+measurement artifact, not an absence of backpressure: 6 samples in a 12 s drain, read through REST
+views cached for 3 s, and a busy ratio Flink sometimes returns as a string. With the sampler fixed
+(0.5 s interval, 500 ms REST refresh, ratios parsed as numbers), the same backlog shows backpressure,
+and a deliberately slow sink shows a lot of it:
+
+| Run (2026-10-23, 2,547,576 records preloaded) | Drain | Max backpressure: source / dedup | Exact |
+| --- | --- | --- | --- |
+| Normal sink | 14.1 s from submit → 181k–226k records/s | 0.28 / 0.41 | yes |
+| Windows sink stalled 2.5 s at every checkpoint | 50.2 s from submit → 51k–53k records/s | **0.95 / 0.98** | yes |
+
+The windows task itself reads as busy (1.0), not backpressured, because the sink is chained into it;
+the waiting shows up upstream, at dedup and the source. Bounded: Kafka is a pull source, so the
+backlog stays in Kafka and the job reads it as fast as the sink allows. Latency is
 measured from the producer's send time of the record that makes a window closable to the row's
 first write in PostgreSQL. It is dominated by sink flushing, which is tied to the 3 s checkpoint
 interval unless the 200 ms flush is enabled. Correctness doesn't change, because the flush before
@@ -181,8 +193,8 @@ each checkpoint still happens (`UpsertSink`).
 ## Not measured
 
 - Recovery or correctness with more than one input partition, or on more than one host.
-- Behaviour under real backpressure (none occurred).
-- Crashes during active processing ([03](03-recovery.md)).
+- Backpressure from a slow downstream other than the sink stall used here (e.g. a slow
+  PostgreSQL under a real write load).
 - The learned detector inside the job, or any detector on non-stationary traffic through the
   cluster.
 - Any cloud or container deployment.

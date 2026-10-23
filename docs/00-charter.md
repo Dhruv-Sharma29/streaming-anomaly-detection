@@ -84,7 +84,7 @@ The SPEC's "important tests" and definition of done, mapped to what checks each 
 | S4 | Malformed or unsupported-schema records go to a visible dead-letter path | `dlq` table + dashboard; `dlq_match` per reason in every run | Met (a table, not a topic: [09](09-implementation-notes.md) § 2) |
 | S5 | Repeated anomaly windows don't create alert storms | Open after 2 / close after 3, `alert_id` upsert; `alerts_match` in every run | Met |
 | S6 | A worker crash before / after sink writes, or mid-checkpoint, still matches | 8 in-flight runs crash with sink writes past the last checkpoint, and 6 crash while a checkpoint is in progress with its rows written; all exact ([03](03-recovery.md)) | Met |
-| S7 | Backpressure stays visible and bounded, no silent drop | Capacity run exact, sampler on; 0.0 backpressure observed on every vertex (`results/raw/load_runs.jsonl`) | **Partly met**: no drops, but never exercised under backpressure |
+| S7 | Backpressure stays visible and bounded, no silent drop | Slow-sink capacity run (`--checkpoint-hold-ms 2500`): backpressure 0.95–0.98 upstream of the sink, drain 4× slower, output exact (`results/raw/load_runs.jsonl`) | Met |
 | S8 | Detector quality reported separately: held-out seeds, precision/recall/delay, same alert budget | `results/summary/detection_budget.json`, 30 held-out runs per regime | Met |
 | S9 | Demo: anomaly + duplicates + delays, kill a worker, recover, verify | `scripts/demo.sh` → `results/demo.log` (`"exact": true`) | Met |
 

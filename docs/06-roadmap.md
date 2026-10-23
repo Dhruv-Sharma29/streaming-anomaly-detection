@@ -12,7 +12,7 @@ evidence, and what is left. Status as of 2026-10-23. The last recorded runs are 
 | M3 Failure correctness | After every crash scenario, final output equals reference | **Done** | 30/30 exact: 16 with the job idle, 8 while input arrives, 6 inside a checkpoint with its rows written ([05](05-evaluation.md), [03](03-recovery.md)) |
 | M4 Anomaly baseline | EWMA + threshold, alert dedup, P/R/delay/false alerts | **Done** | `results/summary/detection.json`; parity test; open/close rule |
 | M5 Learned detector (optional) | Separate training runs, same alert budget | **Done, offline** | `results/summary/detection_budget.json`. Not deployed in the job |
-| M6 Load + optional cloud | Throughput, latency, recovery; backpressure visible and bounded | **Local part done**; cloud not done | `results/raw/load_runs*.jsonl`. No backpressure occurred, so "bounded" is untested |
+| M6 Load + optional cloud | Throughput, latency, recovery; backpressure visible and bounded | **Local part done**; cloud not done | `results/raw/load_runs*.jsonl`; slow-sink run 2026-10-23: backpressure visible (0.95–0.98), output exact |
 
 ### PLAN.md test list
 
@@ -21,7 +21,7 @@ evidence, and what is left. Status as of 2026-10-23. The last recorded runs are 
 | Replayed ids don't inflate counts in-horizon | Covered: dedup + exact windows in every run |
 | Late events follow the documented rule | Covered: `late_match` + boundary unit tests |
 | Crash before/after sink write matches reference | Covered: 8 in-flight runs (sink writes past the last checkpoint replayed) and 6 mid-checkpoint runs, all exact |
-| Backpressure bounded, no silent drop | **Partly**: no drop (exact under a 2.5 M-record backlog); no backpressure observed |
+| Backpressure bounded, no silent drop | Covered: slow-sink run, backpressure 0.95–0.98, exact over 2.5 M records |
 | Bad schema → DLQ | Covered: `dlq` table, per-reason counts |
 | No duplicate alert storms | Covered: open/close rule, `alert_id` upsert, exact alerts |
 
@@ -39,9 +39,8 @@ evidence, and what is left. Status as of 2026-10-23. The last recorded runs are 
 1. ~~**Crash during processing and inside a checkpoint.**~~ Done 2026-10-23 (`--inflight` 8/8,
    `--mid-checkpoint` 6/6). Building it also turned up and fixed a JDBC driver bug and two harness
    measurement bugs ([09](09-implementation-notes.md) § 11b–11d).
-2. **A backpressure run.** Throttle the sink (or slow PostgreSQL) until the ordered chain backs up,
-   and check the run is still exact and that the sampler sees a non-zero ratio. This closes M6's
-   "visible and bounded".
+2. ~~**A backpressure run.**~~ Done 2026-10-23: the sink stalled at every checkpoint, backpressure
+   0.95–0.98 upstream, output exact ([05](05-evaluation.md) § Throughput and latency).
 3. **Run the non-stationary scenarios through the cluster** at least once, so the offline
    detector numbers rest on an observed exact match for both regimes ([04](04-detection.md)).
 4. **Containers**, once a container runtime is available: same stack, same suite. Needs

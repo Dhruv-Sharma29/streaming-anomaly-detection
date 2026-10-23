@@ -108,9 +108,8 @@ Say:
 
 Don't say:
 - "Exactly-once." Not end to end, and not for side effects.
-- "Tested under crashes during processing." Not yet (R2).
 - "The in-job detector scores F1 0.973." That's z = 3.5; the job's z = 4.0 scores 0.966 (M4).
-- "Handles backpressure." None was observed.
+- "Handles any backpressure." Tested with one kind: a sink stalled at checkpoints.
 
 ## The question to have a real answer for
 

@@ -142,11 +142,14 @@ to a few seconds to every recovery time the harness measured. `infra/stack.py` n
 what REST reports, not what the job does. Recovery times recorded before this change are not
 comparable with the current ones.
 
-### 12. "Backpressure bounded" is untested
+### 12. "No backpressure" was a sampling artifact; a slow-sink run now tests it
 
-No vertex ever reported backpressure (`max_backpressured` 0.0 everywhere in v2). The backlog run
-shows no silent drop, because it is exact over 2.5 M records. It cannot show that backpressure is
-*visible and bounded*, because there was none.
+The v2 capacity run reported `max_backpressured` 0.0 on every vertex, from 6 samples in a 12 s
+drain, read through REST views cached for 3 s (§ 11d), with a parser that crashes on ratios
+returned as strings. Fixed 2026-10-23: the sampler polls every 0.5 s and parses ratios as numbers.
+The same backlog then shows backpressure up to 0.41, and `--checkpoint-hold-ms 2500` (the sink
+stalled at every checkpoint) shows 0.95–0.98 upstream of the sink with the drain 4× slower and the
+output exact ([05](05-evaluation.md) § Throughput and latency).
 
 ### 13. The fixed-budget EWMA is not the deployed EWMA
 
@@ -186,4 +189,3 @@ out-of-fold dev predictions.
   margin, plus a new reference model ([02](02-semantics.md) § Scaling beyond one partition).
 - Containers (no runtime on the host) and the optional cloud variant (needs a budget).
 - The learned detector inside the job.
-- Crash modes during active processing; a backpressure run ([06](06-roadmap.md)).

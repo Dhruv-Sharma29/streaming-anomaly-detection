@@ -120,9 +120,12 @@ anomalies remain hard for all three. Median decision delay is 20 s for all; aler
 
 ### Throughput and latency
 
-- **Backlog drain:** 2.55 M records processed in 12.3–14.3 s with exact output, i.e. **178k–208k
-  records/s**. No operator reported backpressure. The single-threaded ordered chain is the
-  deliberate bottleneck.
+- **Backlog drain:** 2.55 M records processed in 12.3–14.3 s with exact output, i.e. **178k–226k
+  records/s**. The single-threaded ordered chain is the deliberate bottleneck.
+- **Backpressure:** with the windows sink stalled at every checkpoint (`eval.load capacity
+  --checkpoint-hold-ms 2500`), the drain slows to 51k–53k records/s, backpressure upstream of the
+  sink reaches 0.95–0.98, and the output is still exact: the surplus waits in Kafka, nothing is
+  dropped (`results/raw/load_runs.jsonl`).
 - **Result latency** at 10× real-time replay (one factor varied, both runs exact):
 
 | Sink flushing | p50 | p95 | max |

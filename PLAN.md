@@ -71,11 +71,11 @@ Deviations from this plan, documented in [`docs/02-semantics.md`](docs/02-semant
 Train on separate seeds/time periods; compare at the **same alert budget**.
 
 ### M6 — Load + optional cloud
-- [ ] Throughput, event-to-result latency, recovery duration; backpressure visible and bounded. (All but backpressure measured; no run has produced backpressure yet: docs/06.)
+- [x] Throughput, event-to-result latency, recovery duration; backpressure visible and bounded. (Backpressure via a slow-sink run, 2026-10-23: docs/05.)
 - [ ] Cloud variant only with spending cap, resource inventory, teardown script. Don't assume managed service = same guarantees.
 
 ## Tests
-- [x] Replayed IDs don't inflate counts in-horizon · [x] late events follow documented rule · [x] crash before/after sink write matches reference · [ ] backpressure bounded, no silent drop (no drop seen; backpressure never produced) · [x] bad schema → DLQ · [x] no duplicate alert storms
+- [x] Replayed IDs don't inflate counts in-horizon · [x] late events follow documented rule · [x] crash before/after sink write matches reference · [x] backpressure bounded, no silent drop · [x] bad schema → DLQ · [x] no duplicate alert storms
 
 ## Risks
 - Flink on arm64 in containers — check early.

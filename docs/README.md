@@ -44,8 +44,8 @@ Detection is evaluated separately, under one false-alert budget, on held-out run
 **As of 2026-10-23, milestones M1–M6 are done locally.** The correctness suite was re-run on
 2026-10-23: 30/30 failure-injection runs match the reference exactly (16 with the job idle, 8 while
 input is still arriving, 6 inside a checkpoint), and `pytest` passes 52 tests. Not done: the
-optional cloud variant, containers, and the learned detector inside the job. The gap that matters
-most: no run ever produced backpressure. See
+optional cloud variant, containers, and the learned detector inside the job. Backpressure was
+produced and measured on 2026-10-23 (a slow sink: 0.95–0.98, output exact). See
 [06-roadmap.md](06-roadmap.md) for what's next, and [09-implementation-notes.md](09-implementation-notes.md)
 for three doc corrections, seven bugs found by the exact comparison and the harness, and the honest
 downgrades that followed.
