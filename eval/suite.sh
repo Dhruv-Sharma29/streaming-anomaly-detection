@@ -43,3 +43,8 @@ run --seed 33 --crash taskmanager --at 0.8 --mid-checkpoint --label tm-crash-mid
 run --seed 34 --crash job --at 0.3 --mid-checkpoint --label job-restore-mid-checkpoint
 run --seed 35 --crash job --at 0.5 --mid-checkpoint --label job-restore-mid-checkpoint
 run --seed 36 --crash job --at 0.8 --mid-checkpoint --label job-restore-mid-checkpoint
+# Non-stationary traffic (slow daily latency wave, benign permanent level shifts) through the cluster.
+run --seed 41 --nonstationary --label clean-nonstationary
+run --seed 42 --nonstationary --crash taskmanager --at 0.5 --inflight --label tm-crash-inflight-nonstationary
+run --seed 43 --nonstationary --crash job --at 0.5 --mid-checkpoint --label job-restore-mid-checkpoint-nonstationary
+run --seed 44 --nonstationary --crash postgres --at 0.5 --inflight --label sink-db-restart-inflight-nonstationary

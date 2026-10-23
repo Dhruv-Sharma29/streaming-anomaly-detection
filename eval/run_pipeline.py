@@ -6,6 +6,7 @@
     python -m eval.run_pipeline --seed 4 --crash postgres --at 0.5        # sink database restarts
     python -m eval.run_pipeline --seed 5 --crash taskmanager --at 0.5 --inflight   # crash while input flows
     python -m eval.run_pipeline --seed 6 --crash taskmanager --at 0.5 --mid-checkpoint   # crash inside a checkpoint
+    python -m eval.run_pipeline --seed 41 --nonstationary                                # daily wave + level shifts
 
 By default the failure is injected 8 s after the input before the cut was produced, so the job is
 idle and a completed checkpoint covers everything it has seen. --inflight produces the whole input
@@ -262,10 +263,10 @@ def cut_index(records: list[dict], at: float, before_very_late: bool) -> int:
 
 def run_once(seed: int, crash_kind: str | None, at: float, rate: float, duration_s: int, label: str,
              before_very_late: bool = False, inflight: bool = False, mid_checkpoint: bool = False,
-             checkpoint_hold_ms: int = 2000) -> dict:
+             checkpoint_hold_ms: int = 2000, nonstationary: bool = False) -> dict:
     run_id = f"{datetime.now(UTC):%Y%m%dT%H%M%SZ}-s{seed}-{crash_kind or 'clean'}-{uuid.uuid4().hex[:4]}"
     topic, group = f"events-{run_id}", f"pipeline-{run_id}"
-    meta, records = generate(Config(seed=seed, duration_s=duration_s))
+    meta, records = generate(Config(seed=seed, duration_s=duration_s, nonstationary=nonstationary))
     expected = compute([r["value"] for r in records])
     expected_alerts = reference_alerts(expected["windows"])
 
@@ -301,7 +302,7 @@ def run_once(seed: int, crash_kind: str | None, at: float, rate: float, duration
         cancel(job_id)
     return {"run_id": run_id, "label": label, "seed": seed, "crash": crash_kind, "crash_at": at if crash_kind else None,
             "cut_before_very_late": before_very_late, "inflight": inflight or mid_checkpoint,
-            "mid_checkpoint": mid_checkpoint, "checkpoint_hold_ms": hold_ms, "cut_index": cut,
+            "mid_checkpoint": mid_checkpoint, "checkpoint_hold_ms": hold_ms, "nonstationary": nonstationary, "cut_index": cut,
             "records": len(records), "produce": produced, "crash_info": crash_info, "settle_s": round(settle_s, 1),
             "window_writes": got["window_writes"], **cmp}
 
@@ -319,6 +320,7 @@ def main() -> None:
     p.add_argument("--mid-checkpoint", action="store_true",
                    help="--inflight, with checkpoints held open after the sink writes; crash while one is in progress")
     p.add_argument("--checkpoint-hold-ms", type=int, default=2000, help="how long --mid-checkpoint holds each checkpoint")
+    p.add_argument("--nonstationary", action="store_true", help="the generator's non-stationary traffic (docs/04-detection.md)")
     p.add_argument("--before-very-late", action="store_true",
                    help="move the crash point to just before a very-late event (adversarial restore test)")
     args = p.parse_args()
@@ -326,7 +328,7 @@ def main() -> None:
     if (args.inflight or args.mid_checkpoint) and (not args.crash or args.before_very_late):
         p.error("--inflight/--mid-checkpoint need --crash and do not combine with --before-very-late")
     result = run_once(args.seed, args.crash, args.at, args.rate, args.duration_s, args.label, args.before_very_late,
-                      args.inflight, args.mid_checkpoint, args.checkpoint_hold_ms)
+                      args.inflight, args.mid_checkpoint, args.checkpoint_hold_ms, args.nonstationary)
     out = ROOT / "results/raw/pipeline_runs.jsonl"
     out.parent.mkdir(parents=True, exist_ok=True)
     with open(out, "a") as f:
