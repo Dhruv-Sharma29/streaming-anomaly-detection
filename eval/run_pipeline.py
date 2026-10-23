@@ -112,11 +112,6 @@ def check_ordering_chain(job_id: str) -> None:
         raise RuntimeError(f"ordering chain broken: {[(v['name'], v['parallelism']) for v in vertices]}")
 
 
-def num_restarts(job_id: str) -> int:
-    metrics = httpx.get(f"{stack.FLINK_URL}/jobs/{job_id}/metrics?get=numRestarts", timeout=5).json()
-    return int(float(metrics[0]["value"])) if metrics else 0
-
-
 def latest_checkpoint(job_id: str) -> str | None:
     info = httpx.get(f"{stack.FLINK_URL}/jobs/{job_id}/checkpoints", timeout=5).json()
     completed = (info.get("latest") or {}).get("completed")
@@ -222,19 +217,25 @@ def crash(kind: str, job_id: str, topic: str, group: str, checkpoint_hold_ms: in
     """Inject a failure and bring processing back. Returns (job id now running, details)."""
     t0 = time.monotonic()
     if kind == "taskmanager":
-        # Recovery = kill until the job has actually failed over (restart counter increased) and every
-        # task runs again. Waiting for RUNNING alone returned before the JobManager even noticed the
-        # loss (10 s heartbeat timeout), giving a spurious 3.1 s.
-        before = num_restarts(job_id)
+        # Recovery = kill until the job has actually failed over and every task runs again. Waiting
+        # for RUNNING alone returned before the JobManager even noticed the loss (a spurious 3.1 s).
+        # Failover is read from the job's own state timestamp (entered RESTARTING after the kill):
+        # the numRestarts metric, polled through REST, never rose within 120 s in 7 of 11 runs of the
+        # 2026-10-23 suite although the JobManager log shows those jobs running again ~4 s after the kill.
+        killed_ms = time.time() * 1000
         stack.kill_taskmanager()
         time.sleep(3)
         stack.taskmanager_up()
-        deadline = time.monotonic() + 120
-        while num_restarts(job_id) <= before and time.monotonic() < deadline:
+        restarting_ms, deadline = None, time.monotonic() + 120
+        while restarting_ms is None and time.monotonic() < deadline:
+            ts = httpx.get(f"{stack.FLINK_URL}/jobs/{job_id}", timeout=5).json().get("timestamps", {}).get("RESTARTING", 0)
+            restarting_ms = ts if ts >= killed_ms else None
             time.sleep(0.5)
-        detected_s = time.monotonic() - t0
+        if restarting_ms is None:
+            raise RuntimeError("the job never restarted after the TaskManager kill")
         wait_running(job_id)
-        return job_id, {"recovery_s": round(time.monotonic() - t0, 1), "failover_detected_s": round(detected_s, 1)}
+        return job_id, {"recovery_s": round(time.monotonic() - t0, 1),
+                        "failover_detected_s": round((restarting_ms - killed_ms) / 1000, 1)}
     if kind == "job":
         checkpoint = wait_checkpoint(job_id)
         cancel(job_id)

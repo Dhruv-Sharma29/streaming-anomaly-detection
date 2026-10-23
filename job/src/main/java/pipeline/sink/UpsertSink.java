@@ -69,6 +69,14 @@ public class UpsertSink<T> implements Sink<T> {
 
         private PreparedStatement statement() throws SQLException {
             if (conn == null || conn.isClosed()) {
+                // The job jar is loaded child-first, where DriverManager's service discovery may not
+                // see the driver; then the first connection failed with "No suitable driver" and the
+                // job restarted once (seen in the Flink logs of 2026-10-06 and 2026-10-23). Register it.
+                try {
+                    Class.forName("org.postgresql.Driver");
+                } catch (ClassNotFoundException e) {
+                    throw new SQLException("PostgreSQL JDBC driver not on the job classpath", e);
+                }
                 conn = DriverManager.getConnection(jdbcUrl);
                 conn.setAutoCommit(true);
                 ps = conn.prepareStatement(sql);

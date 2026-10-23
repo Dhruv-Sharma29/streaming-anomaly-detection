@@ -278,6 +278,11 @@ def flink_conf_dir() -> Path:
         "restart-strategy.type": "fixed-delay",
         "restart-strategy.fixed-delay.attempts": 1000, "restart-strategy.fixed-delay.delay": "2 s",
         "heartbeat.timeout": 10000, "heartbeat.interval": 2000,  # notice a killed TaskManager in ~10 s
+        # REST views the harness polls are cached for web.refresh-interval (default 3 s, the same as the
+        # checkpoint interval, so a poll could lock onto one phase of the checkpoint cycle and never
+        # see a checkpoint in progress). Refresh them often; this changes what the REST API reports,
+        # not what the job does.
+        "web.refresh-interval": "500 ms", "rest.cache.checkpoint-statistics.timeout": "100 ms",
         # Java 17 module access flags Flink needs, carried over from the distribution's own config
         # (dropping them breaks job submission with InaccessibleObjectException).
         "env.java.opts.all": _shipped_java_opts(),
