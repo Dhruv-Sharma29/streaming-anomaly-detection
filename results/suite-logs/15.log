@@ -1,18 +1,21 @@
 {
- "run_id": "20261006T102443Z-s15-taskmanager-face",
+ "run_id": "20261023T103833Z-s15-taskmanager-9a3b",
  "label": "tm-crash",
  "seed": 15,
  "crash": "taskmanager",
  "crash_at": 0.35,
  "cut_before_very_late": false,
+ "inflight": false,
+ "mid_checkpoint": false,
+ "checkpoint_hold_ms": 0,
  "cut_index": 17858,
  "records": 51024,
  "crash_info": {
-  "recovery_s": 3.1,
-  "running_after_restart_s": 0.0
+  "recovery_s": 45.3,
+  "failover_detected_s": 45.2
  },
  "settle_s": 1.0,
- "window_writes": 610,
+ "window_writes": 620,
  "windows_expected": 240,
  "windows_got": 240,
  "windows_missing": 0,

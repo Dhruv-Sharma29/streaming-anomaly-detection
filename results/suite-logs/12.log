@@ -1,18 +1,21 @@
 {
- "run_id": "20261006T102240Z-s12-job-b004",
+ "run_id": "20261023T103630Z-s12-job-1359",
  "label": "job-restore-adversarial",
  "seed": 12,
  "crash": "job",
  "crash_at": 0.5,
  "cut_before_very_late": true,
+ "inflight": false,
+ "mid_checkpoint": false,
+ "checkpoint_hold_ms": 0,
  "cut_index": 26574,
  "records": 51728,
  "crash_info": {
-  "recovery_s": 8.3,
-  "restored_from": "file:/workspace/ItsDS/build/05-streaming-anomaly-detection/.run/checkpoints/f344998c853faaf60e2024f8c3e461cc/chk-5"
+  "recovery_s": 8.1,
+  "restored_from": "file:/workspace/ItsDS/build/05-streaming-anomaly-detection/.run/checkpoints/28a0989d86573c4bd0bf00df3624aa96/chk-5"
  },
- "settle_s": 1.0,
- "window_writes": 564,
+ "settle_s": 3.0,
+ "window_writes": 596,
  "windows_expected": 240,
  "windows_got": 240,
  "windows_missing": 0,
