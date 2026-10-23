@@ -41,8 +41,8 @@ evidence, and what is left. Status as of 2026-10-23. The last recorded runs are 
    measurement bugs ([09](09-implementation-notes.md) § 11b–11d).
 2. ~~**A backpressure run.**~~ Done 2026-10-23: the sink stalled at every checkpoint, backpressure
    0.95–0.98 upstream, output exact ([05](05-evaluation.md) § Throughput and latency).
-3. **Run the non-stationary scenarios through the cluster** at least once, so the offline
-   detector numbers rest on an observed exact match for both regimes ([04](04-detection.md)).
+3. ~~**Run the non-stationary scenarios through the cluster.**~~ Done 2026-10-23: 4/4 exact, clean
+   and with three crash modes ([05](05-evaluation.md) § Non-stationary traffic).
 4. **Containers**, once a container runtime is available: same stack, same suite. Needs
    arm64-compatible images (SPEC.md).
 5. **Cloud variant (optional)**: only with a spending cap, a resource inventory and a teardown

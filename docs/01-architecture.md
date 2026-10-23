@@ -131,7 +131,7 @@ job/         Flink job, Java 17, Maven (pom.xml pins Flink 2.2.1, Kafka connecto
                             EwmaDetector, EwmaModel, DetectorCli (parity), EnvelopeDeserializer
   src/main/java/pipeline/sink/   UpsertSink, StatementBinder
 infra/       stack.py: Postgres, Kafka (KRaft), Flink JM + TM as user-space processes, ports 19xxx
-eval/        run_pipeline.py (one run + crash modes) · suite.sh (30 runs) · detection.py,
+eval/        run_pipeline.py (one run + crash modes) · suite.sh (34 runs) · detection.py,
              detection_budget.py (offline detector quality) · load.py (capacity, latency)
 dashboard/   app.py: FastAPI page over the Postgres tables and the Flink REST API
 scripts/     setup_tools.sh (toolchain into .tools/, checksums verified) · demo.sh

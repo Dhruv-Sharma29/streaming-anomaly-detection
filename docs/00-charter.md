@@ -78,7 +78,7 @@ The SPEC's "important tests" and definition of done, mapped to what checks each 
 
 | # | Criterion | How it's checked | State |
 |---|---|---|---|
-| S1 | After every crash scenario, final sink output equals the reference | `eval/suite.sh`, 30 runs (16 idle, 8 in-flight, 6 mid-checkpoint), all `"exact": true` (`results/suite.log`, 2026-10-23) | Met |
+| S1 | After every crash scenario, final sink output equals the reference | `eval/suite.sh`: 30 runs (16 idle, 8 in-flight, 6 mid-checkpoint, `results/suite.log`) plus 4 on non-stationary traffic (logs 31–34), all `"exact": true` (2026-10-23) | Met |
 | S2 | Replayed event ids don't inflate counts inside the dedup horizon | Dedup before windowing; `windows_mismatched == 0` in every run; `tests/test_reference.py` reconciliation over 20 seeds | Met |
 | S3 | Late events follow the documented update/drop rule | `late_match` in every run; `test_late_event_within_lateness_is_applied`, boundary tests | Met |
 | S4 | Malformed or unsupported-schema records go to a visible dead-letter path | `dlq` table + dashboard; `dlq_match` per reason in every run | Met (a table, not a topic: [09](09-implementation-notes.md) § 2) |

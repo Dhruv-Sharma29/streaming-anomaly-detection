@@ -6,7 +6,8 @@ duplicate, out-of-order, late and malformed events, and through worker kills, jo
 database outages.
 
 > **Status:** complete (milestones 1–6). 30/30 failure-injection runs match the reference exactly:
-> 16 with the job idle, 8 while input is still arriving, 6 inside a checkpoint (re-run 2026-10-23).
+> 16 with the job idle, 8 while input is still arriving, 6 inside a checkpoint (re-run 2026-10-23),
+> and 4/4 more on non-stationary traffic.
 > The learned detector (milestone 5) is evaluated offline. Not done: a managed-cloud variant.
 
 ## Architecture

@@ -66,7 +66,8 @@ eval/suite.sh
 
 30 runs with fixed seeds: 16 with the job idle at the failure (5 clean, 5 TaskManager kills, 4 job
 restores, 2 database outages), 8 in-flight (3 TaskManager kills, 3 job restores, 2 database outages)
-and 6 mid-checkpoint (3 TaskManager kills, 3 job restores). It
+6 mid-checkpoint (3 TaskManager kills, 3 job restores) and 4 on non-stationary traffic (added after
+the recorded 30-run pass; logs 31–34). It
 prints one `run_id … exact` line per run, or `FAILED: …` with the log's last line, and
 **overwrites** `results/suite-logs/NN.log`. Each run is capped at 900 s by `timeout`/`gtimeout`
 when available. The recorded pass ran from `20261023T114036Z` to `20261023T115319Z` plus the last run, about

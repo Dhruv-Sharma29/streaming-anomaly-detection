@@ -98,6 +98,24 @@ only while Flink reports one in progress. `results/suite-logs/25–30.log`.
 In all 6 a checkpoint was in progress at the failure with its rows already in the database, and the
 producer was still sending.
 
+### Non-stationary traffic: 4/4
+
+`--nonstationary` uses the generator's M5 traffic mode: a slow daily latency wave and benign
+permanent level shifts ([04](04-detection.md)). Until 2026-10-23 that mode had only been scored
+offline. Four runs through the cluster (`eval/suite.sh` seeds 41–44, `results/suite-logs/31–34.log`,
+run separately on 2026-10-23 after the 30-run pass):
+
+| Log | Seed | Run (non-stationary traffic) | Windows | Alerts | Checkpoint in progress | Recovery (s) | Exact |
+|---|---|---|---|---|---|---|---|
+| 31 | 41 | clean | 240/240 | 3/3 | — | — | yes |
+| 32 | 42 | TaskManager kill, in flight, 50% | 240/240 | 6/6 | 0 | 7.3 | yes |
+| 33 | 43 | job cancel + restore, mid-checkpoint, 50% | 240/240 | 4/4 | 1 | 3.4 | yes |
+| 34 | 44 | sink database down 8 s, in flight, 50% | 240/240 | 5/5 | 0 | 9.4 | yes |
+
+The streaming pipeline reproduces the reference for that regime too, including the extra alerts the
+level shifts trigger, so the offline detector numbers for non-stationary traffic rest on an observed
+exact match.
+
 **Scope of the claim.** Final table contents are exact after idle, in-flight and mid-checkpoint
 process failures. Not claimed: end-to-end exactly-once side effects, survival of Kafka-log or disk
 loss, or Kafka broker or JobManager failure.
