@@ -56,9 +56,27 @@ generator's rates per valid event are 2 % duplicates, 1 % late (25–32 s), 0.3 
 exact). Seed 4 is missing from it, and a separate `clean-s4-debug` run follows: that pass hit the
 leaked-job harness bug ([09](09-implementation-notes.md) § 9). The suite above is the re-run.
 
-**Scope of the claim.** Final table contents are exact. Not claimed: end-to-end exactly-once side
-effects, survival of Kafka-log or disk loss, or correctness of crashes during active processing
-(failures are injected with the job idle; [03](03-recovery.md) § What the suite does not exercise).
+## Correctness under in-flight failure: 8/8 exact
+
+The 16 runs above inject failures with the job idle. `--inflight` injects them while the input is
+still arriving ([03](03-recovery.md) § Idle crashes and in-flight crashes). Same scenario size and
+producer rate; `results/suite-inflight.log`, `results/suite-logs/17–24.log`,
+`results/raw/pipeline_runs.jsonl` (`"inflight": true`).
+
+| Log | Seed | Failure | Cut | Producer running | Last checkpoint age | Sink writes before crash | Recovery (s) | Exact |
+|---|---|---|---|---|---|---|---|---|
+| 17 | 21 | TaskManager kill | 30% | yes | 0.86 s | 156 | 6.8 | yes |
+| 18 | 22 | TaskManager kill | 50% | yes | 1.53 s | 237 | 6.8 | yes |
+| 19 | 23 | TaskManager kill | 80% | yes | 0.25 s | 511 | 9.3 | yes |
+| 20 | 24 | job cancel + restore | 30% | yes | 1.13 s | 126 | 4.9 | yes |
+| 21 | 25 | job cancel + restore | 50% | yes | 0.43 s | 307 | 4.9 | yes |
+| 22 | 26 | job cancel + restore | 80% | yes | 1.50 s | 484 | 4.9 | yes |
+| 23 | 27 | sink database down 8 s | 40% | yes | 5.39 s | 0 | 11.6 | yes |
+| 24 | 28 | sink database down 8 s | 70% | yes | 1.99 s | 370 | 11.4 | yes |
+
+**Scope of the claim.** Final table contents are exact, after idle and in-flight failures. Not
+claimed: end-to-end exactly-once side effects, survival of Kafka-log or disk loss, or failures
+during a checkpoint (none of the in-flight runs hit one).
 
 ## Detection quality
 

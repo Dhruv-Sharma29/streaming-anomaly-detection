@@ -59,4 +59,4 @@ Ordered by the milestone that forces each skill. "Done when" points at something
 | "I gave up 30 s of alert delay for replay-safe alerts." | `first-e2e` run: windows exact, alerts not; [04](04-detection.md) |
 | "My first detector comparison didn't separate detectors, so I made the data harder and compared at a fixed budget." | `EFFECTS` comment; M4 vs M5 in [05](05-evaluation.md) |
 | "The learned detector's win is fewer false alerts on benign shifts, not recall." | Bootstrap intervals in `detection_budget.json` |
-| "What I'd test next: a crash mid-stream. The current suite kills an idle job." | [03](03-recovery.md), [06](06-roadmap.md) item 1 |
+| "The first suite killed an idle job, so I added crashes mid-stream: 8/8 exact with sink writes replayed. Next: a failure during a checkpoint." | [03](03-recovery.md), [06](06-roadmap.md) item 1 |

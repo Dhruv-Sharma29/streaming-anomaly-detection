@@ -42,10 +42,11 @@ Detection is evaluated separately, under one false-alert budget, on held-out run
 ## Status
 
 **As of 2026-10-23, milestones M1–M6 are done locally. The last runs were recorded 2026-10-06.**
-16/16 failure-injection runs match the reference exactly, and `pytest` passes 52 tests (re-run
-2026-10-23). Not done: the optional cloud variant, containers, and the learned detector inside the
-job. Two gaps matter more than those. Crashes are injected while the job is idle, so replay of
-in-flight records is barely tested, and no run ever produced backpressure. See
+16/16 failure-injection runs match the reference exactly, and so do 8/8 runs that crash while the
+input is still arriving (added 2026-10-23, with sink writes replayed); `pytest` passes 52 tests.
+Not done: the optional cloud variant, containers, and the learned detector inside the job. Two gaps
+matter more than those: no failure has landed during a checkpoint, and no run ever produced
+backpressure. See
 [06-roadmap.md](06-roadmap.md) for what's next, and [09-implementation-notes.md](09-implementation-notes.md)
 for three doc corrections, seven bugs found by the exact comparison and the harness, and the honest
 downgrades that followed.

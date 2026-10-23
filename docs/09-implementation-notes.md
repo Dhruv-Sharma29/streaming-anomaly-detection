@@ -93,13 +93,14 @@ includes job start-up, and "from RUNNING" starts after the source has already be
 
 ## Honest downgrades
 
-### 11. Crash points: idle job, not before/after sink write or mid-checkpoint
+### 11. Crash points: idle job first, in-flight added; mid-checkpoint still open
 
-PLAN.md M3: "kill TaskManager before sink write, after sink write, mid-checkpoint". The harness
-crashes at input fractions after an 8 s pause, with the job idle and fully checkpointed
-([03](03-recovery.md) § What the suite does not exercise). The adversarial restore covers the
-case that was actually broken. The in-flight replay path is untested. Deferred to [06](06-roadmap.md)
-item 1.
+PLAN.md M3: "kill TaskManager before sink write, after sink write, mid-checkpoint". The first 16 runs
+crash at input fractions after an 8 s pause, with the job idle and fully checkpointed. On 2026-10-23
+`--inflight` was added: the input keeps arriving while the failure happens. 8 runs (TaskManager kill,
+job restore, sink outage) are all exact, with sink writes past the last checkpoint replayed
+([03](03-recovery.md) § Idle crashes and in-flight crashes). Mid-checkpoint is still not covered:
+no run hit a checkpoint in progress. [06](06-roadmap.md) item 1.
 
 ### 12. "Backpressure bounded" is untested
 

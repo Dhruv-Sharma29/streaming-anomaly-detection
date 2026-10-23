@@ -5,7 +5,8 @@ alerts. It produces **exactly the same result as an independent offline referenc
 duplicate, out-of-order, late and malformed events, and through worker kills, job restores and
 database outages.
 
-> **Status:** complete (milestones 1–6). 16/16 failure-injection runs match the reference exactly.
+> **Status:** complete (milestones 1–6). 16/16 failure-injection runs match the reference exactly,
+> and so do 8/8 runs that crash while input is still arriving (added 2026-10-23).
 > The learned detector (milestone 5) is evaluated offline. Not done: a managed-cloud variant.
 
 ## Architecture
@@ -40,7 +41,12 @@ claimed) are in [docs/02-semantics.md](docs/02-semantics.md). Components and tra
 
 ## Results (single host, local processes)
 
-### Correctness under failure: 16/16 runs exact
+### Correctness under failure: 16/16 runs exact, plus 8/8 in-flight
+
+The 16 runs below inject each failure with the job idle. Eight more (`--inflight`, seeds 21–28)
+crash while records are still arriving, so processed-but-uncheckpointed records and sink writes are
+replayed; all 8 are exact too (`results/suite-inflight.log`, details in
+[docs/03-recovery.md](docs/03-recovery.md)). A failure during a checkpoint is not yet tested.
 
 Each run replays a 10-minute scenario: about 51k records, with roughly 2% duplicates, 1% late, 0.3%
 very late, and 0.2% malformed or unsupported-schema records, at about 46× real time. Each run then

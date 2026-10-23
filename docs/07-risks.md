@@ -22,18 +22,18 @@ the generator away from boundaries where the two could legitimately differ.
 **Mitigation:** the margin and the tripwire are already in place. What would strengthen it: a
 small hand-computed scenario with expected rows written out by hand, not by the reference.
 
-### R2 — Crash points are the easy ones *(certain, medium impact)*
+### R2 — Crash points are the easy ones *(was certain; mostly mitigated 2026-10-23)*
 
-The harness pauses 8 s before every injected failure, so the job is idle and the restore point
-covers all prior input ([03](03-recovery.md) § What the suite does not exercise). The
-replay-and-overwrite path, which carries most of the at-least-once argument, is barely exercised.
+The original 16 runs pause 8 s before every injected failure, so the job is idle and the restore
+point covers all prior input. That left the replay-and-overwrite path, which carries most of the
+at-least-once argument, barely exercised.
 
 **Detection:** read the harness, not the result line. `run_once` in `eval/run_pipeline.py`.
 
-**Mitigation:** the scope of the claim already says "final table contents" and "process failure".
-The fix is a crash mode without the pause ([06](06-roadmap.md) item 1). Until then, the honest
-summary is: *state restore is verified, including the adversarial watermark case; replay under
-load is argued, not tested.*
+**Mitigation:** `--inflight` crashes while the input is still arriving. 8/8 such runs are exact, with
+0.25–5.39 s of uncheckpointed processing and up to 511 sink writes replayed
+([03](03-recovery.md) § Idle crashes and in-flight crashes). What remains argued, not tested: a
+failure during a checkpoint ([06](06-roadmap.md) item 1).
 
 ### R3 — Exactness by construction *(medium likelihood, medium impact)*
 
@@ -99,7 +99,8 @@ base), chosen below the ephemeral range.
 
 Say:
 - "16/16 failure-injection runs produce exactly the reference's final tables, including restores
-  where the first record after recovery is very late."
+  where the first record after recovery is very late, and so do 8/8 runs that crash while input is
+  still arriving."
 - "At-least-once input plus idempotent upserts of deterministic values; final state is exact."
 - "Recovery 3.2–10.0 s after a TaskManager kill, 8.3–8.5 s after a job restore, 8.4 s from the
   start of an 8 s database outage; one host, local processes."
@@ -119,5 +120,6 @@ together from a checkpoint. The sink is at-least-once. Every write is an upsert 
 a pure function of the input sequence, so a replayed write lands the same value. That is
 "effectively once" *for the final contents of keyed tables*. It isn't for anything that observes
 intermediate writes: a reader can see a row twice-written, or briefly stale, during recovery. Then
-the follow-up worth volunteering: the crash suite so far kills an idle job, so the overwrite path
-is argued more than measured. The next crash mode to add is the one that kills mid-stream.
+the follow-up worth volunteering: the first suite only killed an idle job, so I added a mode that
+kills mid-stream, and 8/8 of those runs are exact with sink rows overwritten on replay. The case
+still untested is a failure during a checkpoint.

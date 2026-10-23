@@ -50,16 +50,23 @@ uv run python -m eval.run_pipeline --seed 4 --crash postgres --at 0.5       # si
 uv run python -m eval.run_pipeline --seed 9 --crash taskmanager --at 0.5 --before-very-late   # adversarial
 ```
 
-Remember what these do and don't test: the harness pauses 8 s before the failure, so the job is
-idle when it dies ([docs/03-recovery.md](docs/03-recovery.md)).
+Remember what these do and don't test: by default the harness pauses 8 s before the failure, so the
+job is idle when it dies. Add `--inflight` to crash while the input is still arriving
+([docs/03-recovery.md](docs/03-recovery.md)):
 
-## 4. The correctness suite (~10 minutes)
+```bash
+uv run python -m eval.run_pipeline --seed 22 --crash taskmanager --at 0.5 --inflight
+```
+
+## 4. The correctness suite (~13 minutes)
 
 ```bash
 eval/suite.sh
 ```
 
-16 runs with fixed seeds (5 clean, 5 TaskManager kills, 4 job restores, 2 database outages). It
+24 runs with fixed seeds: 16 with the job idle at the failure (5 clean, 5 TaskManager kills, 4 job
+restores, 2 database outages) and 8 in-flight (3 TaskManager kills, 3 job restores, 2 database
+outages; the 8 alone took about 3.5 minutes on 2026-10-23). It
 prints one `run_id … exact` line per run, or `FAILED: …` with the log's last line, and
 **overwrites** `results/suite-logs/NN.log`. Each run is capped at 900 s by `timeout`/`gtimeout`
 when available. The recorded pass ran from `20261006T101637Z` to `20261006T102518Z` plus the last

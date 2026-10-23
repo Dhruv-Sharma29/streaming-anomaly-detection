@@ -78,12 +78,12 @@ The SPEC's "important tests" and definition of done, mapped to what checks each 
 
 | # | Criterion | How it's checked | State |
 |---|---|---|---|
-| S1 | After every crash scenario, final sink output equals the reference | `eval/suite.sh`, 16 runs, all `"exact": true` (`results/suite.log`) | Met |
+| S1 | After every crash scenario, final sink output equals the reference | `eval/suite.sh`: 16 runs (`results/suite.log`) plus 8 in-flight runs (`results/suite-inflight.log`), all `"exact": true` | Met |
 | S2 | Replayed event ids don't inflate counts inside the dedup horizon | Dedup before windowing; `windows_mismatched == 0` in every run; `tests/test_reference.py` reconciliation over 20 seeds | Met |
 | S3 | Late events follow the documented update/drop rule | `late_match` in every run; `test_late_event_within_lateness_is_applied`, boundary tests | Met |
 | S4 | Malformed or unsupported-schema records go to a visible dead-letter path | `dlq` table + dashboard; `dlq_match` per reason in every run | Met (a table, not a topic: [09](09-implementation-notes.md) § 2) |
 | S5 | Repeated anomaly windows don't create alert storms | Open after 2 / close after 3, `alert_id` upsert; `alerts_match` in every run | Met |
-| S6 | A worker crash before / after sink writes, or mid-checkpoint, still matches | Crashes are injected after an 8 s pause, with the job idle ([03](03-recovery.md)) | **Not met as specified** |
+| S6 | A worker crash before / after sink writes, or mid-checkpoint, still matches | 8 in-flight runs crash with sink writes past the last checkpoint, all exact ([03](03-recovery.md)); no run hit a checkpoint in progress | **Partly met**: before/after sink writes yes, mid-checkpoint untested |
 | S7 | Backpressure stays visible and bounded, no silent drop | Capacity run exact, sampler on; 0.0 backpressure observed on every vertex (`results/raw/load_runs.jsonl`) | **Partly met**: no drops, but never exercised under backpressure |
 | S8 | Detector quality reported separately: held-out seeds, precision/recall/delay, same alert budget | `results/summary/detection_budget.json`, 30 held-out runs per regime | Met |
 | S9 | Demo: anomaly + duplicates + delays, kill a worker, recover, verify | `scripts/demo.sh` → `results/demo.log` (`"exact": true`) | Met |
@@ -92,7 +92,6 @@ The SPEC's "important tests" and definition of done, mapped to what checks each 
 
 An exact match proves less than it seems if the two sides could be wrong the same way. The
 reference and the job share one constants file and one written semantics, so a misreading of how
-Flink behaves would show up in both and pass ([07](07-risks.md) § R1). Also, the crash points so
-far are the easy ones: the job is idle when it dies, so the in-flight replay path is barely
-exercised ([07](07-risks.md) § R2). The suite is strong evidence for state restore, including the
-adversarial watermark case. It is weaker evidence for replay under load.
+Flink behaves would show up in both and pass ([07](07-risks.md) § R1). The first 16 crash points
+were the easy ones, with the job idle when it died; 8 in-flight runs now cover replay with sink
+overwrites ([07](07-risks.md) § R2). A failure during a checkpoint is still untested.

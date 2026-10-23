@@ -96,22 +96,43 @@ Whether the job actually failed over *during* the outage isn't recorded. The inp
 that moment (next section), so the sink may have had nothing to write until the outage ended
 **[verify]** (`numRestarts` is not logged for this mode).
 
-## What the suite does not exercise
+## Idle crashes and in-flight crashes
 
-`run_once` sleeps 8 s after producing the input before the cut and before injecting the failure
-("input before the cut is consumed and covered by a completed checkpoint", `eval/run_pipeline.py`).
-With 3 s checkpoints and a job that drains far faster than the 4,000 records/s producer, the job is
-**idle** when it fails, and the restore point already covers all input before the cut. So:
+The original 16 runs inject the failure 8 s after producing the input before the cut ("input before
+the cut is consumed and covered by a completed checkpoint", `eval/run_pipeline.py`). With 3 s
+checkpoints and a job that drains far faster than the 4,000 records/s producer, the job is **idle**
+when it fails, and the restore point already covers all input before the cut. Those runs show that
+state restore is correct, including the adversarial watermark case, but barely use the
+replay-and-overwrite path (chain step 3).
 
-| Not exercised | Why it matters | What would exercise it |
+`--inflight` (added 2026-10-23) closes most of that gap. The whole input is produced in a background
+thread and the failure fires once the cut fraction has been sent, with no pause. Records after the
+last completed checkpoint, many of them already written to the sink, must then be replayed and
+overwritten with identical values. Each run records the state at the moment of the crash. Eight runs
+(`eval/suite.sh` seeds 21–28, `results/suite-inflight.log`, `results/suite-logs/17–24.log`):
+
+| Log | Seed | Failure | Cut | Producer running | Last checkpoint age | Sink writes before crash | Recovery (s) | Exact |
+|---|---|---|---|---|---|---|---|---|
+| 17 | 21 | TaskManager kill | 30% | yes | 0.86 s | 156 | 6.8 | yes |
+| 18 | 22 | TaskManager kill | 50% | yes | 1.53 s | 237 | 6.8 | yes |
+| 19 | 23 | TaskManager kill | 80% | yes | 0.25 s | 511 | 9.3 | yes |
+| 20 | 24 | job cancel + restore | 30% | yes | 1.13 s | 126 | 4.9 | yes |
+| 21 | 25 | job cancel + restore | 50% | yes | 0.43 s | 307 | 4.9 | yes |
+| 22 | 26 | job cancel + restore | 80% | yes | 1.50 s | 484 | 4.9 | yes |
+| 23 | 27 | sink database down 8 s | 40% | yes | 5.39 s | 0 | 11.6 | yes |
+| 24 | 28 | sink database down 8 s | 70% | yes | 1.99 s | 370 | 11.4 | yes |
+
+All 8 are exact: windows, alerts, late-dropped ids and dead-letter counts all match the reference.
+In every run the producer was still sending, the last completed checkpoint was 0.25–5.39 s old, and in 7
+of 8 the sink already held 126–511 window writes that had to be overwritten on replay (seed 27's
+outage started before the first window fired).
+
+| Still not exercised | Why it matters | What would exercise it |
 | --- | --- | --- |
-| Kill while records are in flight | The replay-and-overwrite path (chain step 3) is barely used | Crash without the pause, at random offsets, while producing |
-| Kill between a sink flush and checkpoint completion | Rows written for a checkpoint that never completes must be overwritten identically | Crash triggered on the checkpoint-start notification |
-| Kill mid-checkpoint | PLAN.md M3 asks for it explicitly | Same, with a slow checkpoint |
+| Kill mid-checkpoint | PLAN.md M3 asks for it. No in-flight run hit one (`checkpoints_in_progress` was 0 every time): checkpoints take milliseconds every 3 s | Crash triggered on the checkpoint-start notification, with a slow checkpoint |
 | Kafka broker or JobManager failure | Different recovery paths (no HA configured) | Out of scope on one host |
 | Loss of the checkpoint directory or Kafka log | Not claimed | — |
 
-The adversarial cases do attack restored state in the place where it was actually broken. Read
-the 16/16 result as "state restore is correct, including the watermark", not as "replay under
-load is correct". The latter is argued (chain step 3) but only lightly tested. This is listed as
-[07](07-risks.md) § R2 and [09](09-implementation-notes.md) § 11.
+Read the 16/16 result as "state restore is correct, including the watermark", and the 8/8 in-flight
+result as "replay of processed-but-uncheckpointed records, including sink overwrites, is correct".
+Mid-checkpoint failure remains argued, not tested ([07](07-risks.md) § R2, [09](09-implementation-notes.md) § 11).
