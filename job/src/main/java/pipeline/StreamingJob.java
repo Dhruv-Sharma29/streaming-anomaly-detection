@@ -24,7 +24,7 @@ import java.util.Map;
 /**
  * Kafka -> validate (DLQ) -> lateness (checkpointed watermark) -> de-duplicate -> 10 s event-time windows
  * -> idempotent Postgres upserts; finalized windows (after allowed lateness) -> EWMA detector -> alerts.
- * Semantics: docs/semantics.md. Every operator has a stable uid so checkpoints restore by name.
+ * Semantics: docs/02-semantics.md. Every operator has a stable uid so checkpoints restore by name.
  */
 public class StreamingJob {
     static final OutputTag<Envelope> DLQ = new OutputTag<>("dlq") {};

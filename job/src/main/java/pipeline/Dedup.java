@@ -9,7 +9,7 @@ import pipeline.model.Event;
 
 /**
  * Keyed by event_id. Drops an event whose id was seen until the watermark passes first_ts + H,
- * when an event-time timer clears the state (docs/semantics.md, De-duplication).
+ * when an event-time timer clears the state (docs/02-semantics.md, De-duplication).
  */
 public class Dedup extends KeyedProcessFunction<String, Event, Event> {
     private final long horizonMs;

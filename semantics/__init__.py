@@ -1,4 +1,4 @@
-"""Single source of truth for stream semantics (docs/semantics.md). The Flink job reads the same
+"""Single source of truth for stream semantics (docs/02-semantics.md). The Flink job reads the same
 constants.json, so Python reference and Java job can't drift apart silently."""
 
 from __future__ import annotations

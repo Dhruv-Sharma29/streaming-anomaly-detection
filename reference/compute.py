@@ -39,7 +39,7 @@ def compute(values: list[str]) -> dict:
     (periodic emission, per-partition minimum, records and watermarks in order per channel), so
     only decisions the reference makes *because the watermark has passed something* (late-drop,
     dedup state expired) can differ. Those must clear MARGIN_MS, which must exceed Flink's
-    watermark lag in event time; that lag grows with replay speed (docs/semantics.md).
+    watermark lag in event time; that lag grows with replay speed (docs/02-semantics.md).
     """
     max_ts: int | None = None
     first_seen: dict[str, int] = {}

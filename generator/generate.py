@@ -15,7 +15,7 @@ Delivery faults (rates are per valid event):
   schema v3      0.1% unsupported version   -> dead-letter
   schema v2      5%   v1 + optional region  -> accepted
 Delay classes keep every include/drop decision >= decision_margin_ms away from the boundary
-(docs/semantics.md); `check_margins` verifies it on the generated output.
+(docs/02-semantics.md); `check_margins` verifies it on the generated output.
 """
 
 from __future__ import annotations
@@ -67,7 +67,7 @@ class Config:
     seed: int
     duration_s: int = 600
     rate_per_service: float = 20.0
-    partitions: int = 1             # see docs/semantics.md: single partition for deterministic lateness
+    partitions: int = 1             # see docs/02-semantics.md: single partition for deterministic lateness
     warmup_s: int = 120              # no anomalies before this: detectors need a baseline
     n_anomalies: int = 5
     n_benign: int = 2

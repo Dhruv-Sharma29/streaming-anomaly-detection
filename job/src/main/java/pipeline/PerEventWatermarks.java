@@ -10,7 +10,7 @@ import pipeline.model.Envelope;
  * time). With a single input partition, the watermark seen with each element is then exactly the
  * reference's (max event time before it - bound - 1 ms), apart from network-buffer delay. The
  * periodic default lagged up to ~9 s of event time at 46x replay speed, enough to change
- * late-event decisions (docs/semantics.md, "Determinism and replay speed").
+ * late-event decisions (docs/02-semantics.md, "Determinism and replay speed").
  */
 public class PerEventWatermarks implements WatermarkGenerator<Envelope> {
     private final long boundMs;

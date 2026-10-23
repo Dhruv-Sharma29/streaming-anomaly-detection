@@ -10,7 +10,7 @@ import pipeline.model.WindowResult;
 
 import java.util.Arrays;
 
-/** Window metrics as defined in docs/semantics.md; marks first firing vs late-event update. */
+/** Window metrics as defined in docs/02-semantics.md; marks first firing vs late-event update. */
 public class WindowMetrics extends ProcessWindowFunction<Event, WindowResult, String, TimeWindow> {
     private static final ValueStateDescriptor<Boolean> FIRED = new ValueStateDescriptor<>("fired", Boolean.class);
     private final int errorStatusMin;
