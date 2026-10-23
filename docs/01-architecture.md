@@ -115,8 +115,8 @@ Schema: `infra/stack.py` (`SCHEMA`).
   reports every detector on both regimes ([04](04-detection.md)). The stationary scenarios used by
   the correctness suite are unchanged byte for byte (`tests/test_detection.py`, seed-1 SHA-256).
 - By default failures are injected while the job is idle (the harness waits 8 s, so the restore
-  point covers all input before the cut); `--inflight` crashes while input is still arriving. A
-  failure during a checkpoint is not exercised ([03](03-recovery.md) § Idle crashes and in-flight crashes).
+  point covers all input before the cut); `--inflight` crashes while input is still arriving, and
+  `--mid-checkpoint` while a checkpoint is in progress ([03](03-recovery.md) § Idle, in-flight and mid-checkpoint crashes).
 - The learned detector is evaluated offline only; the job runs EWMA ([04](04-detection.md)).
 
 ## Repository layout
@@ -131,7 +131,7 @@ job/         Flink job, Java 17, Maven (pom.xml pins Flink 2.2.1, Kafka connecto
                             EwmaDetector, EwmaModel, DetectorCli (parity), EnvelopeDeserializer
   src/main/java/pipeline/sink/   UpsertSink, StatementBinder
 infra/       stack.py: Postgres, Kafka (KRaft), Flink JM + TM as user-space processes, ports 19xxx
-eval/        run_pipeline.py (one run + crash modes) · suite.sh (24 runs) · detection.py,
+eval/        run_pipeline.py (one run + crash modes) · suite.sh (30 runs) · detection.py,
              detection_budget.py (offline detector quality) · load.py (capacity, latency)
 dashboard/   app.py: FastAPI page over the Postgres tables and the Flink REST API
 scripts/     setup_tools.sh (toolchain into .tools/, checksums verified) · demo.sh

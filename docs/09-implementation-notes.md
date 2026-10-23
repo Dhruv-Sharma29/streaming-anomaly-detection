@@ -93,14 +93,28 @@ includes job start-up, and "from RUNNING" starts after the source has already be
 
 ## Honest downgrades
 
-### 11. Crash points: idle job first, in-flight added; mid-checkpoint still open
+### 11. Crash points: idle job first; in-flight and mid-checkpoint added 2026-10-23
 
 PLAN.md M3: "kill TaskManager before sink write, after sink write, mid-checkpoint". The first 16 runs
-crash at input fractions after an 8 s pause, with the job idle and fully checkpointed. On 2026-10-23
-`--inflight` was added: the input keeps arriving while the failure happens. 8 runs (TaskManager kill,
-job restore, sink outage) are all exact, with sink writes past the last checkpoint replayed
-([03](03-recovery.md) § Idle crashes and in-flight crashes). Mid-checkpoint is still not covered:
-no run hit a checkpoint in progress. [06](06-roadmap.md) item 1.
+crash at input fractions after an 8 s pause, with the job idle and fully checkpointed. Two modes
+close the rest: `--inflight` (the input keeps arriving while the failure happens; 8/8 exact, sink
+writes past the last checkpoint replayed) and `--mid-checkpoint` (6/6 exact, crash while a checkpoint
+is in progress with its rows already written) ([03](03-recovery.md) § Idle, in-flight and mid-checkpoint crashes).
+
+### 11a. A test-only hook in the job for mid-checkpoint crashes
+
+Checkpoints take milliseconds every 3 s, so no in-flight run ever caught one in progress.
+`UpsertSink.holdingCheckpoints(ms)`, set from the job's `--checkpoint-hold-ms` (default 0) on the
+windows sink, sleeps after the pre-checkpoint flush has written its rows, holding the barrier and
+so the checkpoint open. With 0 nothing changes; the jar was rebuilt and all 30 suite runs and the
+Python/Java parity test pass on it. Production runs never set it.
+
+### 11b. TaskManager recovery timing was unreliable in the 2026-10-23 suite
+
+The failover detector in `crash()` (wait for `numRestarts` to rise, cap 120 s) gave 3.1 s to the cap
+for the same failure; 7 of 11 TaskManager runs hit the cap while their output was already exact. The
+suite ran next to two GPU training jobs. Not root-caused; the dedicated `tm-recovery-timing` runs stay
+the reference ([03](03-recovery.md) § Recovery time).
 
 ### 12. "Backpressure bounded" is untested
 

@@ -5,8 +5,8 @@ alerts. It produces **exactly the same result as an independent offline referenc
 duplicate, out-of-order, late and malformed events, and through worker kills, job restores and
 database outages.
 
-> **Status:** complete (milestones 1–6). 16/16 failure-injection runs match the reference exactly,
-> and so do 8/8 runs that crash while input is still arriving (added 2026-10-23).
+> **Status:** complete (milestones 1–6). 30/30 failure-injection runs match the reference exactly:
+> 16 with the job idle, 8 while input is still arriving, 6 inside a checkpoint (re-run 2026-10-23).
 > The learned detector (milestone 5) is evaluated offline. Not done: a managed-cloud variant.
 
 ## Architecture
@@ -41,12 +41,12 @@ claimed) are in [docs/02-semantics.md](docs/02-semantics.md). Components and tra
 
 ## Results (single host, local processes)
 
-### Correctness under failure: 16/16 runs exact, plus 8/8 in-flight
+### Correctness under failure: 30/30 runs exact
 
-The 16 runs below inject each failure with the job idle. Eight more (`--inflight`, seeds 21–28)
-crash while records are still arriving, so processed-but-uncheckpointed records and sink writes are
-replayed; all 8 are exact too (`results/suite-inflight.log`, details in
-[docs/03-recovery.md](docs/03-recovery.md)). A failure during a checkpoint is not yet tested.
+The 16 runs below inject each failure with the job idle. Eight more (`--inflight`) crash while
+records are still arriving, so processed-but-uncheckpointed records and sink writes are replayed,
+and six (`--mid-checkpoint`) crash while a checkpoint is in progress with its rows already written.
+All 30 are exact (`results/suite.log`, details in [docs/03-recovery.md](docs/03-recovery.md)).
 
 Each run replays a 10-minute scenario: about 51k records, with roughly 2% duplicates, 1% late, 0.3%
 very late, and 0.2% malformed or unsupported-schema records, at about 46× real time. Each run then
@@ -65,8 +65,8 @@ dead-letter counts by reason, and every alert, including its floating-point scor
 | Recovery (failure → every task running on restored state) | Time |
 | --- | --- |
 | TaskManager SIGKILL, restarted after 3 s | 3.2–10.0 s |
-| Job cancel → resume from retained checkpoint | 8.3–8.5 s |
-| Sink database down for 8 s | 8.4 s from outage start |
+| Job cancel → resume from retained checkpoint | 4.9–8.1 s |
+| Sink database down for 8 s | 8.4–11.6 s from outage start |
 
 **Scope of the claim.** Final table contents are exact. Duplicate writes of identical values during
 replay are expected. Not claimed: end-to-end exactly-once side effects, or survival of Kafka-log or

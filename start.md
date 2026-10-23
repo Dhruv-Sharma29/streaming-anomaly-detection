@@ -94,7 +94,7 @@ to read them are in [docs/05-evaluation.md](docs/05-evaluation.md) § Detection 
 ## 5. Run the real pipeline
 
 Needs PostgreSQL, Kafka and Flink running locally. Follow [RUNBOOK.md](RUNBOOK.md): start the
-stack, one clean run, one crash run, the 24-run suite (~13 min), the dashboard demo, and the load
+stack, one clean run, one crash run, the 30-run suite (~30 min), the dashboard demo, and the load
 measurements.
 
 ---

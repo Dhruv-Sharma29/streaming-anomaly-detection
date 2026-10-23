@@ -13,7 +13,14 @@ per README), as local processes.
 | Detection | How well does each detector find labelled anomalies at a fixed false-alert budget, on runs it was not tuned on? | No pass/fail; precision, recall, delay, false alerts per run, with intervals |
 | Load | How fast does the ordered chain drain a backlog, and how stale are results? | Output still exact under load |
 
-## Correctness under failure: 16/16 exact
+## Correctness under failure: 30/30 exact
+
+`eval/suite.sh` has three groups: 16 runs with the job idle at the failure, 8 with the input still
+arriving (`--inflight`) and 6 inside a checkpoint (`--mid-checkpoint`). All 30 were re-run on
+2026-10-23 with the job jar rebuilt for the mid-checkpoint hook (the hook is off unless asked for);
+the 2026-10-06 pass of the first 16 is in git history.
+
+### Job idle at the failure: 16/16
 
 `eval/suite.sh` → `results/suite.log` (one line per run) and `results/suite-logs/NN.log` (full
 record). Each scenario is 10 minutes of event time for 4 services, produced at 4,000 records/s,
@@ -21,25 +28,29 @@ about 46× real time.
 
 | Log | Seed | Label | Cut (% of input) | Records | Window writes | Windows | Alerts | Recovery (s) | Exact |
 |---|---|---|---|---|---|---|---|---|---|
-| 01 | 1 | clean |  | 51,584 | 625 | 240/240 | 5/5 | — | yes |
-| 02 | 2 | clean |  | 51,207 | 618 | 240/240 | 5/5 | — | yes |
+| 01 | 1 | clean |  | 51,584 | 616 | 240/240 | 5/5 | — | yes |
+| 02 | 2 | clean |  | 51,207 | 611 | 240/240 | 5/5 | — | yes |
 | 03 | 3 | clean |  | 50,808 | 617 | 240/240 | 4/4 | — | yes |
 | 04 | 4 | clean |  | 51,659 | 635 | 240/240 | 4/4 | — | yes |
-| 05 | 5 | clean |  | 50,893 | 633 | 240/240 | 3/3 | — | yes |
-| 06 | 6 | tm-crash | 20 | 52,028 | 618 | 240/240 | 4/4 | 3.1 † | yes |
-| 07 | 7 | tm-crash | 50 | 51,043 | 632 | 240/240 | 4/4 | 10.0 † | yes |
-| 08 | 8 | tm-crash | 80 | 51,035 | 635 | 240/240 | 5/5 | 9.4 † | yes |
-| 09 | 9 | tm-crash-adversarial | 50 → next very-late | 51,630 | 652 | 240/240 | 5/5 | 9.9 † | yes |
-| 10 | 10 | job-restore | 30 | 50,826 | 621 | 240/240 | 5/5 | 8.5 | yes |
-| 11 | 11 | job-restore | 70 | 50,560 | 608 | 240/240 | 5/5 | 8.5 | yes |
-| 12 | 12 | job-restore-adversarial | 50 → next very-late | 51,728 | 564 | 240/240 | 4/4 | 8.3 | yes |
-| 13 | 13 | sink-db-restart | 40 | 52,449 | 585 | 240/240 | 4/4 | 8.4 | yes |
-| 14 | 14 | sink-db-restart | 70 | 50,762 | 580 | 240/240 | 4/4 | 8.4 | yes |
-| 15 | 15 | tm-crash | 35 | 51,024 | 610 | 240/240 | 4/4 | 3.1 † | yes |
-| 16 | 16 | job-restore-adversarial | 55 → next very-late | 52,135 | 591 | 240/240 | 5/5 | 8.3 | yes |
+| 05 | 5 | clean |  | 50,893 | 637 | 240/240 | 3/3 | — | yes |
+| 06 | 6 | tm-crash | 20 | 52,028 | 621 | 240/240 | 4/4 | 9.4 | yes |
+| 07 | 7 | tm-crash | 50 | 51,043 | 613 | 240/240 | 4/4 | 9.4 | yes |
+| 08 | 8 | tm-crash | 80 | 51,035 | 639 | 240/240 | 5/5 | 123.5 ‡ | yes |
+| 09 | 9 | tm-crash-adversarial | 50 → next very-late | 51,630 | 650 | 240/240 | 5/5 | 123.2 ‡ | yes |
+| 10 | 10 | job-restore | 30 | 50,826 | 621 | 240/240 | 5/5 | 8.1 | yes |
+| 11 | 11 | job-restore | 70 | 50,560 | 596 | 240/240 | 5/5 | 8.1 | yes |
+| 12 | 12 | job-restore-adversarial | 50 → next very-late | 51,728 | 596 | 240/240 | 4/4 | 8.1 | yes |
+| 13 | 13 | sink-db-restart | 40 | 52,449 | 622 | 240/240 | 4/4 | 8.4 | yes |
+| 14 | 14 | sink-db-restart | 70 | 50,762 | 587 | 240/240 | 4/4 | 8.4 | yes |
+| 15 | 15 | tm-crash | 35 | 51,024 | 620 | 240/240 | 4/4 | 45.3 | yes |
+| 16 | 16 | job-restore-adversarial | 55 → next very-late | 52,135 | 599 | 240/240 | 5/5 | 8.1 | yes |
 
-† Recorded with the earlier recovery timer; see [03](03-recovery.md) § Recovery time for the
-re-measured values (3.2–10.0 s).
+‡ The harness's failover detector (wait until the job's `numRestarts` rises, capped at 120 s, after
+the 3 s restart delay) did not see the counter rise within the cap, so this run gives no TaskManager
+recovery time. Detected values in this suite range from 3.1 s to the cap for the same failure, while
+the results were already exact when the harness stopped waiting. The suite ran on 2026-10-23 next to
+two GPU training jobs; the cause is not established. The dedicated `tm-recovery-timing` runs
+(3.2–10.0 s, [03](03-recovery.md) § Recovery time) remain the TaskManager reference.
 
 Every run also has `late_match`, `dlq_match` and `alerts_match` true and `window_operator_late`
 0. *Window writes* exceeds 240 because late events and repeated flushes upsert a row again. It is
@@ -56,27 +67,44 @@ generator's rates per valid event are 2 % duplicates, 1 % late (25–32 s), 0.3 
 exact). Seed 4 is missing from it, and a separate `clean-s4-debug` run follows: that pass hit the
 leaked-job harness bug ([09](09-implementation-notes.md) § 9). The suite above is the re-run.
 
-## Correctness under in-flight failure: 8/8 exact
+### Input still arriving: 8/8
 
-The 16 runs above inject failures with the job idle. `--inflight` injects them while the input is
-still arriving ([03](03-recovery.md) § Idle crashes and in-flight crashes). Same scenario size and
-producer rate; `results/suite-inflight.log`, `results/suite-logs/17–24.log`,
-`results/raw/pipeline_runs.jsonl` (`"inflight": true`).
+`--inflight` injects the failure while the input is still being produced ([03](03-recovery.md)
+§ Idle, in-flight and mid-checkpoint crashes). `results/suite-logs/17–24.log`.
 
-| Log | Seed | Failure | Cut | Producer running | Last checkpoint age | Sink writes before crash | Recovery (s) | Exact |
-|---|---|---|---|---|---|---|---|---|
-| 17 | 21 | TaskManager kill | 30% | yes | 0.86 s | 156 | 6.8 | yes |
-| 18 | 22 | TaskManager kill | 50% | yes | 1.53 s | 237 | 6.8 | yes |
-| 19 | 23 | TaskManager kill | 80% | yes | 0.25 s | 511 | 9.3 | yes |
-| 20 | 24 | job cancel + restore | 30% | yes | 1.13 s | 126 | 4.9 | yes |
-| 21 | 25 | job cancel + restore | 50% | yes | 0.43 s | 307 | 4.9 | yes |
-| 22 | 26 | job cancel + restore | 80% | yes | 1.50 s | 484 | 4.9 | yes |
-| 23 | 27 | sink database down 8 s | 40% | yes | 5.39 s | 0 | 11.6 | yes |
-| 24 | 28 | sink database down 8 s | 70% | yes | 1.99 s | 370 | 11.4 | yes |
+| Log | Seed | Failure | Cut | Checkpoint in progress | Producer running | Last checkpoint age | Sink writes before crash | Recovery (s) | Exact |
+|---|---|---|---|---|---|---|---|---|---|
+| 17 | 21 | TaskManager kill | 30% | 0 | yes | 0.27 s | 174 | 9.4 | yes |
+| 18 | 22 | TaskManager kill | 50% | 0 | yes | 0.99 s | 262 | 127.2 ‡ | yes |
+| 19 | 23 | TaskManager kill | 80% | 0 | yes | 0.55 s | 491 | 123.3 ‡ | yes |
+| 20 | 24 | job cancel + restore | 30% | 0 | yes | 0.8 s | 145 | 5.1 | yes |
+| 21 | 25 | job cancel + restore | 50% | 0 | yes | 0.49 s | 308 | 5.1 | yes |
+| 22 | 26 | job cancel + restore | 80% | 0 | yes | 1.32 s | 497 | 5.0 | yes |
+| 23 | 27 | sink database down 8 s | 40% | 0 | yes | 0.27 s | 253 | 11.6 | yes |
+| 24 | 28 | sink database down 8 s | 70% | 0 | yes | 2.19 s | 351 | 11.5 | yes |
 
-**Scope of the claim.** Final table contents are exact, after idle and in-flight failures. Not
-claimed: end-to-end exactly-once side effects, survival of Kafka-log or disk loss, or failures
-during a checkpoint (none of the in-flight runs hit one).
+### Inside a checkpoint: 6/6
+
+`--mid-checkpoint` holds each checkpoint open for 2 s after the sink has written its rows and crashes
+only while Flink reports one in progress. `results/suite-logs/25–30.log`.
+
+| Log | Seed | Failure | Cut | Checkpoint in progress | Producer running | Last checkpoint age | Sink writes before crash | Recovery (s) | Exact |
+|---|---|---|---|---|---|---|---|---|---|
+| 25 | 31 | TaskManager kill | 30% | 1 | no | 1.0 s | 588 | 123.1 ‡ | yes |
+| 26 | 32 | TaskManager kill | 50% | 1 | no | 1.03 s | 619 | 123.4 ‡ | yes |
+| 27 | 33 | TaskManager kill | 80% | 1 | yes | 1.36 s | 535 | 123.1 ‡ | yes |
+| 28 | 34 | job cancel + restore | 30% | 1 | yes | 4.76 s | 17 | 8.1 | yes |
+| 29 | 35 | job cancel + restore | 50% | 1 | yes | none completed yet | 247 | 8.0 | yes |
+| 30 | 36 | job cancel + restore | 80% | 1 | yes | 1.2 s | 535 | 4.9 | yes |
+
+In all 6 a checkpoint was in progress at the failure, with its rows already in the database. In
+runs 25–26 the wait for an in-progress checkpoint (12 s and 58 s) outlasted the producer, so those
+two are mid-checkpoint but not mid-input. In run 29 no checkpoint had completed yet, so the job
+restore had to wait for one first.
+
+**Scope of the claim.** Final table contents are exact after idle, in-flight and mid-checkpoint
+process failures. Not claimed: end-to-end exactly-once side effects, survival of Kafka-log or disk
+loss, Kafka broker or JobManager failure, or TaskManager recovery times from this suite (‡).
 
 ## Detection quality
 

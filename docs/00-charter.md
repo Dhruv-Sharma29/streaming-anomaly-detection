@@ -78,12 +78,12 @@ The SPEC's "important tests" and definition of done, mapped to what checks each 
 
 | # | Criterion | How it's checked | State |
 |---|---|---|---|
-| S1 | After every crash scenario, final sink output equals the reference | `eval/suite.sh`: 16 runs (`results/suite.log`) plus 8 in-flight runs (`results/suite-inflight.log`), all `"exact": true` | Met |
+| S1 | After every crash scenario, final sink output equals the reference | `eval/suite.sh`, 30 runs (16 idle, 8 in-flight, 6 mid-checkpoint), all `"exact": true` (`results/suite.log`, 2026-10-23) | Met |
 | S2 | Replayed event ids don't inflate counts inside the dedup horizon | Dedup before windowing; `windows_mismatched == 0` in every run; `tests/test_reference.py` reconciliation over 20 seeds | Met |
 | S3 | Late events follow the documented update/drop rule | `late_match` in every run; `test_late_event_within_lateness_is_applied`, boundary tests | Met |
 | S4 | Malformed or unsupported-schema records go to a visible dead-letter path | `dlq` table + dashboard; `dlq_match` per reason in every run | Met (a table, not a topic: [09](09-implementation-notes.md) § 2) |
 | S5 | Repeated anomaly windows don't create alert storms | Open after 2 / close after 3, `alert_id` upsert; `alerts_match` in every run | Met |
-| S6 | A worker crash before / after sink writes, or mid-checkpoint, still matches | 8 in-flight runs crash with sink writes past the last checkpoint, all exact ([03](03-recovery.md)); no run hit a checkpoint in progress | **Partly met**: before/after sink writes yes, mid-checkpoint untested |
+| S6 | A worker crash before / after sink writes, or mid-checkpoint, still matches | 8 in-flight runs crash with sink writes past the last checkpoint, and 6 crash while a checkpoint is in progress with its rows written; all exact ([03](03-recovery.md)) | Met |
 | S7 | Backpressure stays visible and bounded, no silent drop | Capacity run exact, sampler on; 0.0 backpressure observed on every vertex (`results/raw/load_runs.jsonl`) | **Partly met**: no drops, but never exercised under backpressure |
 | S8 | Detector quality reported separately: held-out seeds, precision/recall/delay, same alert budget | `results/summary/detection_budget.json`, 30 held-out runs per regime | Met |
 | S9 | Demo: anomaly + duplicates + delays, kill a worker, recover, verify | `scripts/demo.sh` → `results/demo.log` (`"exact": true`) | Met |
@@ -93,5 +93,5 @@ The SPEC's "important tests" and definition of done, mapped to what checks each 
 An exact match proves less than it seems if the two sides could be wrong the same way. The
 reference and the job share one constants file and one written semantics, so a misreading of how
 Flink behaves would show up in both and pass ([07](07-risks.md) § R1). The first 16 crash points
-were the easy ones, with the job idle when it died; 8 in-flight runs now cover replay with sink
-overwrites ([07](07-risks.md) § R2). A failure during a checkpoint is still untested.
+were the easy ones, with the job idle when it died; 8 in-flight and 6 mid-checkpoint runs now cover
+replay with sink overwrites ([07](07-risks.md) § R2).
