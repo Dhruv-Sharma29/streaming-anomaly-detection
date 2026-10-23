@@ -30,14 +30,14 @@ Brief: [SPEC.md](SPEC.md). Two separately reported results: **(1) pipeline corre
 | M5 learned detector | **Done (offline).** Non-stationary traffic mode added; gradient-boosted detector vs EWMA vs static under a fixed false-alert budget: significantly fewer false alerts on non-stationary traffic |
 | M6 load + recovery | **Done** locally (see README). Cloud variant not done (optional, needs a budget) |
 
-Deviations from this plan, all documented in `docs/semantics.md`:
+Deviations from this plan, documented in [`docs/02-semantics.md`](docs/02-semantics.md) and [`docs/01-architecture.md`](docs/01-architecture.md) (full list: [`docs/09-implementation-notes.md`](docs/09-implementation-notes.md)):
 - Single input partition plus a checkpointed lateness operator, instead of relying on Flink's
   per-partition watermarks and window-operator lateness (three reproduced failures).
 - Detector consumes finalized windows, not first firings (deterministic alerts, +30 s delay).
 - Own idempotent JDBC upsert sink, not the JDBC connector.
 - Local processes instead of containers (no Docker on the host).
 
-## Write these definitions first (`docs/semantics.md`)
+## Write these definitions first ([`docs/02-semantics.md`](docs/02-semantics.md))
 - Event time vs ingestion time; which one windows use.
 - Watermark policy (e.g. bounded out-of-orderness of X s) and allowed lateness.
 - Late-event behaviour: update window result vs side-output/drop — pick one.

@@ -1,7 +1,26 @@
-# Stream semantics
+# 02 — Stream semantics
 
 The reference calculator (`reference/`) and the Flink job (`job/`) implement these rules exactly.
 If they disagree, either the job is wrong or this document is ambiguous. Fix the document first.
+
+This is the contract every other doc leans on: [01](01-architecture.md) shows where each rule
+runs, [03](03-recovery.md) argues why the rules survive a crash, and [05](05-evaluation.md) is the
+evidence. Every numeric constant below lives once, in `semantics/constants.json`, which both the
+Python side (`semantics/__init__.py`) and the Java side (`job/.../Constants.java`) load.
+
+| Constant | Value | Key in `semantics/constants.json` |
+| --- | --- | --- |
+| Window size | 10 s | `window_ms` |
+| Watermark bound B | 5 s | `watermark_bound_ms` |
+| Allowed lateness L | 30 s | `allowed_lateness_ms` |
+| Dedup horizon H | 5 min | `dedup_horizon_ms` |
+| Decision margin | 15 s | `decision_margin_ms` |
+| Error status | ≥ 500 | `error_status_min` |
+| Accepted schema versions | 1, 2 | `accepted_schema_versions` |
+
+Three sentences in the original version of this doc did not match the code. They are kept as
+written and annotated in place with **Code check** notes (2026-10-23); see
+[09](09-implementation-notes.md) § 1–3.
 
 ## Events
 
@@ -25,6 +44,17 @@ record to the `events-dlq` topic with a reason, and it's counted. It's never sil
 
 **Ingestion time** is the Kafka record timestamp (broker append time). It's recorded for latency
 measurement only and is never used for windowing.
+
+> **Code check.** (a) Kafka key: `generator/generate.py` (`deliveries`) keys every record by
+> `event_id`, not `service`, so duplicates land on the same partition and no partition is left
+> empty; windows are still keyed by `service` inside the job. (b) Dead letters: there is no
+> `events-dlq` Kafka topic in the code. `StreamingJob.java` sends invalid records to a side
+> output that the `sink-dlq` upsert sink writes to the PostgreSQL `dlq` table, keyed by
+> `(kafka_partition, kafka_offset)`, with the reason and raw value (`infra/stack.py` schema). The
+> dashboard and the exact comparison read that table. (c) Ingestion time: the job does not read
+> the Kafka record timestamp. Result latency is measured by `eval/load.py` from the producer's
+> wall-clock send time to the row's `first_written_at` in PostgreSQL. The rule that matters,
+> *never used for windowing*, holds.
 
 ## Windows and metrics
 
@@ -126,3 +156,38 @@ firings. Their contents depend on how far the watermark lagged when late events 
 alerts differed between runs of identical input. Final values are deterministic, which makes
 alerts replay-safe. Cost: L (30 s) of extra detection delay. See `detector/` for the rule and
 `results/summary/detection.json` for quality.
+[04](04-detection.md) covers the detector itself, and `results/summary/detection_budget.json` the
+fixed-budget comparison added in M5.
+
+## Determinism and replay speed
+
+*(Added when this doc was folded into the numbered set. `job/.../PerEventWatermarks.java` points
+at a section with this name.)*
+
+Every rule above is written as a function of the input **sequence**, never of wall-clock time.
+Flink's own decisions, though, depend on when its watermark arrives at each operator, and that lag
+in event time grows with replay speed. The suite replays at about 46× real time: `eval/run_pipeline.py`
+produces 4,000 records/s by default, and a 10-minute scenario is about 51.6k records
+(`results/suite-logs/01.log`: 51,584), roughly 86 records/s in real time. Three things keep
+the job's decisions equal to the reference's at that speed:
+
+| Mechanism | What it removes | Where |
+| --- | --- | --- |
+| Watermark after every event | Periodic-emission lag (~9 s of event time at 46×) | `PerEventWatermarks.java` |
+| Lateness decided from checkpointed state in arrival order | Dependence on Flink's watermark at all, and its reset to −∞ after restore | `LatenessFilter.java` |
+| 15 s decision margin, enforced by the reference | Decisions that only Flink's own timers make (dedup expiry; window-operator late path as a backstop) | `reference/compute.py` raises `AmbiguousDecision` |
+
+The 20 ms network buffer timeout (`env.setBufferTimeout(20)` in `StreamingJob.java`, default
+100 ms) bounds how far, in event time, a watermark on one channel can trail another. That matters
+for the parallelism-2 operators after the ordered chain.
+
+## Where each rule is enforced and tested
+
+| Rule | Python (reference) | Java (job) | Tested by |
+| --- | --- | --- | --- |
+| Parse / dead-letter reasons | `semantics.parse` | `EnvelopeDeserializer.validate` (same checks, same order) | `tests/test_reference.py::test_invalid_records_get_a_reason`; `dlq_match` in every suite run |
+| Watermark and late-drop boundary | `semantics.watermark`, `late_slack_ms` | `LatenessFilter` | `test_late_slack_matches_flink_is_window_late`; `late_match` in every suite run |
+| Margin refusal | `reference.compute` | — (the job never needs to know) | `test_drop_decisions_too_close_to_the_boundary_are_refused`; 20 generated seeds |
+| Dedup within H | `reference.compute` (`first_seen`) | `Dedup` (event-time timer clears state) | `test_windows_duplicates_late_and_dlq`; reconciliation over 20 seeds |
+| Window metrics, nearest-rank p95 | `reference.compute._metrics`, `semantics.p95` | `WindowMetrics` | `test_p95_nearest_rank`; `windows_mismatched == 0` in every suite run |
+| Tripwire stays empty | — | `window_operator_late` side output | `window_operator_late == 0` in every suite run |

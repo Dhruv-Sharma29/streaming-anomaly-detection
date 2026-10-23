@@ -35,8 +35,8 @@ flowchart LR
 ```
 
 The rules behind every decision (watermark, lateness, de-duplication, the guarantee claimed and not
-claimed) are in [docs/semantics.md](docs/semantics.md). Components and trade-offs are in
-[docs/architecture.md](docs/architecture.md).
+claimed) are in [docs/02-semantics.md](docs/02-semantics.md). Components and trade-offs are in
+[docs/01-architecture.md](docs/01-architecture.md).
 
 ## Results (single host, local processes)
 
@@ -167,7 +167,7 @@ job/         Flink job (Java 17): validate, LatenessFilter, Dedup, windows, Ewma
 infra/       local stack manager: Postgres, Kafka (KRaft), Flink standalone
 eval/        run_pipeline (exact comparison, crash modes), suite.sh, detection, load
 dashboard/   live view of windows, alerts, dead letters and job state
-docs/        semantics.md (the rules), architecture.md (components and decisions)
+docs/        numbered design record: 00-charter … 09-implementation-notes (index: docs/README.md)
 ```
 
 ## Design decisions
@@ -179,6 +179,18 @@ docs/        semantics.md (the rules), architecture.md (components and decisions
   at-least-once + idempotent-upsert argument visible, at the cost of owning the code.
 - **Python reference and Java job share one constants file.** A parity test requires bit-identical
   alerts from the two detector implementations.
+
+## Docs
+
+Start with [start.md](start.md) to run what needs no services, and [RUNBOOK.md](RUNBOOK.md) for the
+Kafka/Flink/PostgreSQL steps. The design record is in [`docs/`](docs/README.md), with a reading order:
+
+- [Charter](docs/00-charter.md): scope, non-goals, success criteria and which are met
+- [Stream semantics](docs/02-semantics.md): watermark, lateness, dedup, the guarantee claimed
+- [Recovery](docs/03-recovery.md): why final state is exact, and what the crash suite doesn't test yet
+- [Evaluation](docs/05-evaluation.md): every number above, with its source file
+- [Risks](docs/07-risks.md): claim hygiene and "is this exactly-once?"
+- [Implementation notes](docs/09-implementation-notes.md): where the code departs from the plan
 
 Planning documents: [SPEC.md](SPEC.md) · [PLAN.md](PLAN.md)
 
