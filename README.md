@@ -95,7 +95,7 @@ at most 0.5 false alerts per run, then frozen. Results are on 30 held-out runs p
 
 | Detector | Stationary: P / R / F1 | False alerts per run | Non-stationary: P / R / F1 | False alerts per run |
 | --- | --- | --- | --- | --- |
-| EWMA z-score (runs in the Flink job) | 1.000 / 0.947 / 0.973 | 0.00 | 0.937 / 0.893 / 0.915 | 0.30 |
+| EWMA z-score (the job's detector, re-tuned to z = 3.5 for this budget; the job runs z = 4.0) | 1.000 / 0.947 / 0.973 | 0.00 | 0.937 / 0.893 / 0.915 | 0.30 |
 | Static thresholds from warm-up medians | 0.993 / 0.927 / 0.959 | 0.03 | 0.902 / 0.920 / 0.911 | 0.50 |
 | **Learned** (gradient-boosted trees on causal window features) | 1.000 / 0.953 / 0.976 | 0.00 | **0.965 / 0.920 / 0.942** | **0.17** |
 
@@ -139,7 +139,7 @@ Flink 2.2.1, Maven, PostgreSQL 16) is unpacked into `.tools/` with checksums ver
 scripts/setup_tools.sh
 uv sync
 (cd job && JAVA_HOME=../.tools/jdk ../.tools/maven/bin/mvn -B -Dmaven.repo.local=../.tools/m2 package)
-uv run pytest                      # 51 tests: semantics, reference, generator, detector parity, feature causality
+uv run pytest                      # 52 tests: semantics, reference, generator, detector parity, feature causality
 uv run python -m infra.stack up    # Postgres :19432, Kafka :19092, Flink UI :19081
 eval/suite.sh                      # correctness suite (~10 min)
 scripts/demo.sh                    # watch a crash and recovery on the dashboard (:19080)
