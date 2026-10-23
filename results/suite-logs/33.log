@@ -1,0 +1,40 @@
+{
+ "run_id": "20261023T144241Z-s43-job-4c1f",
+ "label": "job-restore-mid-checkpoint-nonstationary",
+ "seed": 43,
+ "crash": "job",
+ "crash_at": 0.5,
+ "cut_before_very_late": false,
+ "inflight": true,
+ "mid_checkpoint": true,
+ "checkpoint_hold_ms": 2000,
+ "nonstationary": true,
+ "cut_index": 25800,
+ "records": 51601,
+ "crash_info": {
+  "recovery_s": 3.4,
+  "restored_from": "file:/workspace/ItsDS/build/05-streaming-anomaly-detection/.run/checkpoints/3ad851f88caf52391221667fb9792d20/chk-2",
+  "at_crash": {
+   "checkpoints_in_progress": 1,
+   "last_completed_id": 2,
+   "since_last_completed_s": 1.15,
+   "sink_window_writes": 342,
+   "producer_running": true,
+   "waited_for_checkpoint_s": 0.33
+  }
+ },
+ "settle_s": 3.1,
+ "window_writes": 798,
+ "windows_expected": 240,
+ "windows_got": 240,
+ "windows_missing": 0,
+ "windows_extra": 0,
+ "windows_mismatched": 0,
+ "late_match": true,
+ "dlq_match": true,
+ "alerts_match": true,
+ "alerts_expected": 4,
+ "alerts_got": 4,
+ "window_operator_late": 0,
+ "exact": true
+}

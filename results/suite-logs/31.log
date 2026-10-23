@@ -1,0 +1,34 @@
+%3|1792766510.087|FAIL|rdkafka#producer-1| [thrd:127.0.0.1:19092/bootstrap]: 127.0.0.1:19092/bootstrap: Connect to ipv4#127.0.0.1:19092 failed: Connection refused (after 0ms in state CONNECT)
+%3|1792766510.138|FAIL|rdkafka#producer-1| [thrd:127.0.0.1:19092/bootstrap]: 127.0.0.1:19092/bootstrap: Connect to ipv4#127.0.0.1:19092 failed: Connection refused (after 0ms in state CONNECT, 1 identical error(s) suppressed)
+%3|1792766512.589|FAIL|rdkafka#producer-2| [thrd:127.0.0.1:19092/bootstrap]: 127.0.0.1:19092/bootstrap: Connect to ipv4#127.0.0.1:19092 failed: Connection refused (after 0ms in state CONNECT)
+%3|1792766512.640|FAIL|rdkafka#producer-2| [thrd:127.0.0.1:19092/bootstrap]: 127.0.0.1:19092/bootstrap: Connect to ipv4#127.0.0.1:19092 failed: Connection refused (after 0ms in state CONNECT, 1 identical error(s) suppressed)
+%4|1792766524.296|GETPID|rdkafka#producer-4| [thrd:main]: Failed to acquire idempotence PID from broker 127.0.0.1:19092/1: Broker: Coordinator load in progress: retrying
+{
+ "run_id": "20261023T144159Z-s41-clean-7cec",
+ "label": "clean-nonstationary",
+ "seed": 41,
+ "crash": null,
+ "crash_at": null,
+ "cut_before_very_late": false,
+ "inflight": false,
+ "mid_checkpoint": false,
+ "checkpoint_hold_ms": 0,
+ "nonstationary": true,
+ "cut_index": 51764,
+ "records": 51764,
+ "crash_info": null,
+ "settle_s": 2.0,
+ "window_writes": 621,
+ "windows_expected": 240,
+ "windows_got": 240,
+ "windows_missing": 0,
+ "windows_extra": 0,
+ "windows_mismatched": 0,
+ "late_match": true,
+ "dlq_match": true,
+ "alerts_match": true,
+ "alerts_expected": 3,
+ "alerts_got": 3,
+ "window_operator_late": 0,
+ "exact": true
+}
