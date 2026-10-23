@@ -1,5 +1,5 @@
 {
- "run_id": "20261023T102746Z-s4-clean-8655",
+ "run_id": "20261023T114133Z-s4-clean-2ad6",
  "label": "clean",
  "seed": 4,
  "crash": null,
@@ -11,8 +11,8 @@
  "cut_index": 51659,
  "records": 51659,
  "crash_info": null,
- "settle_s": 1.0,
- "window_writes": 635,
+ "settle_s": 2.0,
+ "window_writes": 639,
  "windows_expected": 240,
  "windows_got": 240,
  "windows_missing": 0,

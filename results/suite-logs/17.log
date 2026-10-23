@@ -1,5 +1,5 @@
 {
- "run_id": "20261023T104031Z-s21-taskmanager-a08b",
+ "run_id": "20261023T114830Z-s21-taskmanager-85d4",
  "label": "tm-crash-inflight",
  "seed": 21,
  "crash": "taskmanager",
@@ -11,19 +11,19 @@
  "cut_index": 15197,
  "records": 50659,
  "crash_info": {
-  "recovery_s": 9.4,
-  "failover_detected_s": 3.1,
+  "recovery_s": 8.3,
+  "failover_detected_s": 3.5,
   "at_crash": {
    "checkpoints_in_progress": 0,
-   "last_completed_id": 2,
-   "since_last_completed_s": 0.27,
-   "sink_window_writes": 174,
+   "last_completed_id": 1,
+   "since_last_completed_s": 2.9,
+   "sink_window_writes": 36,
    "producer_running": true,
    "waited_for_checkpoint_s": null
   }
  },
- "settle_s": 0.0,
- "window_writes": 615,
+ "settle_s": 1.0,
+ "window_writes": 612,
  "windows_expected": 240,
  "windows_got": 240,
  "windows_missing": 0,

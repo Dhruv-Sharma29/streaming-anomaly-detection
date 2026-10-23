@@ -1,5 +1,5 @@
 {
- "run_id": "20261023T104629Z-s26-job-17b3",
+ "run_id": "20261023T115021Z-s26-job-9de8",
  "label": "job-restore-inflight",
  "seed": 26,
  "crash": "job",
@@ -11,19 +11,19 @@
  "cut_index": 41852,
  "records": 52315,
  "crash_info": {
-  "recovery_s": 5.0,
-  "restored_from": "file:/workspace/ItsDS/build/05-streaming-anomaly-detection/.run/checkpoints/d0bdcd5f276d3be1fd4eab788183e979/chk-4",
+  "recovery_s": 2.5,
+  "restored_from": "file:/workspace/ItsDS/build/05-streaming-anomaly-detection/.run/checkpoints/1df2d89382c0e8598872f3833610d9ec/chk-4",
   "at_crash": {
    "checkpoints_in_progress": 0,
    "last_completed_id": 4,
-   "since_last_completed_s": 1.32,
-   "sink_window_writes": 497,
+   "since_last_completed_s": 0.29,
+   "sink_window_writes": 566,
    "producer_running": true,
    "waited_for_checkpoint_s": null
   }
  },
  "settle_s": 2.0,
- "window_writes": 616,
+ "window_writes": 661,
  "windows_expected": 240,
  "windows_got": 240,
  "windows_missing": 0,

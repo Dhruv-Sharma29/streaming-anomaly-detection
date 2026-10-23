@@ -1,5 +1,5 @@
 {
- "run_id": "20261023T103950Z-s16-job-024b",
+ "run_id": "20261023T114758Z-s16-job-a5b6",
  "label": "job-restore-adversarial",
  "seed": 16,
  "crash": "job",
@@ -11,11 +11,11 @@
  "cut_index": 28831,
  "records": 52135,
  "crash_info": {
-  "recovery_s": 8.1,
-  "restored_from": "file:/workspace/ItsDS/build/05-streaming-anomaly-detection/.run/checkpoints/53789952e2b678c81551a2cb72b7d889/chk-6"
+  "recovery_s": 3.6,
+  "restored_from": "file:/workspace/ItsDS/build/05-streaming-anomaly-detection/.run/checkpoints/012cd95fc26b7d266b968179bf6cd5de/chk-5"
  },
- "settle_s": 3.0,
- "window_writes": 599,
+ "settle_s": 2.0,
+ "window_writes": 639,
  "windows_expected": 240,
  "windows_got": 240,
  "windows_missing": 0,

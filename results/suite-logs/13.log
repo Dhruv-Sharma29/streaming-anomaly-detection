@@ -1,5 +1,5 @@
 {
- "run_id": "20261023T103711Z-s13-postgres-9dd1",
+ "run_id": "20261023T114611Z-s13-postgres-8eff",
  "label": "sink-db-restart",
  "seed": 13,
  "crash": "postgres",
@@ -11,10 +11,10 @@
  "cut_index": 20979,
  "records": 52449,
  "crash_info": {
-  "recovery_s": 8.4
+  "recovery_s": 8.5
  },
- "settle_s": 2.0,
- "window_writes": 622,
+ "settle_s": 1.1,
+ "window_writes": 590,
  "windows_expected": 240,
  "windows_got": 240,
  "windows_missing": 0,

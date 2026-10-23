@@ -1,5 +1,5 @@
 {
- "run_id": "20261023T104720Z-s28-postgres-a862",
+ "run_id": "20261023T115101Z-s28-postgres-1c06",
  "label": "sink-db-restart-inflight",
  "seed": 28,
  "crash": "postgres",
@@ -11,18 +11,18 @@
  "cut_index": 35789,
  "records": 51128,
  "crash_info": {
-  "recovery_s": 11.5,
+  "recovery_s": 9.9,
   "at_crash": {
    "checkpoints_in_progress": 0,
    "last_completed_id": 3,
-   "since_last_completed_s": 2.19,
-   "sink_window_writes": 351,
+   "since_last_completed_s": 1.54,
+   "sink_window_writes": 407,
    "producer_running": true,
    "waited_for_checkpoint_s": null
   }
  },
- "settle_s": 0.0,
- "window_writes": 617,
+ "settle_s": 1.0,
+ "window_writes": 585,
  "windows_expected": 240,
  "windows_got": 240,
  "windows_missing": 0,
