@@ -1,11 +1,14 @@
 """Load, latency and backpressure measurements (milestone 6). Needs the cluster to itself.
 
     python -m eval.load capacity --rate-per-service 500 --duration-s 300
+    python -m eval.load capacity --checkpoint-hold-ms 2500 --label slow-sink    # force backpressure
     python -m eval.load latency --speed 10 --label flush-on-checkpoint
 
 capacity  Pre-loads the whole scenario into Kafka, then starts the job: measures how fast the
           pipeline drains a backlog (accepted events/s until every window is final and exact),
-          sampling Flink's backpressure ratio while it does.
+          sampling Flink's backpressure ratio while it does. --checkpoint-hold-ms stalls the
+          windows sink at every checkpoint (the job's test-only hook), a slow sink that must push
+          backpressure upstream; the run then shows whether it is visible and the output still exact.
 latency   Replays at `speed`x real time. Per window: latency = row first written - wall time
           the record that closed it (first record with event time >= window end + bound) was
           sent. Reported p50/p95/max.
@@ -36,23 +39,33 @@ from semantics import BOUND_MS, WINDOW_MS, parse
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _ratio(value) -> float | None:
+    """Flink reports ratios as numbers, but sometimes as strings (e.g. "NaN" before the first sample)."""
+    try:
+        r = float(value)
+    except (TypeError, ValueError):
+        return None
+    return None if r != r else r
+
+
 def backpressure_sampler(job_id: str, stop: threading.Event, samples: list) -> None:
     while not stop.is_set():
         try:
             for v in httpx.get(f"{stack.FLINK_URL}/jobs/{job_id}", timeout=5).json()["vertices"]:
                 bp = httpx.get(f"{stack.FLINK_URL}/jobs/{job_id}/vertices/{v['id']}/backpressure", timeout=5).json()
-                subtasks = bp.get("subtasks", [])
-                if subtasks:
-                    samples.append({"vertex": v["name"].split(" ->")[0][:30],
-                                    "backpressured": max(s.get("ratio", 0) for s in subtasks),
-                                    "busy": max(s.get("busyRatio", 0) for s in subtasks),
-                                    "idle": min(s.get("idleRatio", 1) for s in subtasks)})
+                subs = bp.get("subtasks", [])
+                ratios = [r for r in (_ratio(s.get("ratio")) for s in subs) if r is not None]
+                busy = [r for r in (_ratio(s.get("busyRatio")) for s in subs) if r is not None]
+                idle = [r for r in (_ratio(s.get("idleRatio")) for s in subs) if r is not None]
+                if ratios:
+                    samples.append({"vertex": v["name"].split(" ->")[0][:30], "backpressured": max(ratios),
+                                    "busy": max(busy) if busy else 0.0, "idle": min(idle) if idle else 1.0})
         except (httpx.HTTPError, KeyError, ValueError):
             pass
-        stop.wait(2)
+        stop.wait(0.5)   # REST views refresh every 500 ms (infra/stack.py)
 
 
-def capacity(rate_per_service: float, duration_s: int, seed: int) -> dict:
+def capacity(rate_per_service: float, duration_s: int, seed: int, checkpoint_hold_ms: int = 0, label: str = "") -> dict:
     meta, records = generate(Config(seed=seed, duration_s=duration_s, rate_per_service=rate_per_service))
     expected = compute([r["value"] for r in records])
     run_id = f"{datetime.now(UTC):%Y%m%dT%H%M%SZ}-capacity"
@@ -62,7 +75,7 @@ def capacity(rate_per_service: float, duration_s: int, seed: int) -> dict:
     clean_slate()
     produced = produce(records, topic)  # whole backlog first
     t_submit = time.monotonic()
-    job_id = submit(topic, f"pipeline-{run_id}")
+    job_id = submit(topic, f"pipeline-{run_id}", checkpoint_hold_ms=checkpoint_hold_ms)
     samples: list = []
     stop = threading.Event()
     try:
@@ -85,7 +98,8 @@ def capacity(rate_per_service: float, duration_s: int, seed: int) -> dict:
         v["max_backpressured"] = round(max(v["max_backpressured"], s["backpressured"]), 2)
         v["max_busy"] = round(max(v["max_busy"], s["busy"]), 2)
         v["samples"] += 1
-    return {"run_id": run_id, "mode": "capacity", "records": len(records), "accepted": expected["counts"]["accepted"],
+    return {"run_id": run_id, "mode": "capacity", "label": label, "checkpoint_hold_ms": checkpoint_hold_ms,
+            "records": len(records), "accepted": expected["counts"]["accepted"],
             "produce": produced, "drain_from_submit_s": round(from_submit, 1), "drain_from_running_s": round(from_running, 1),
             "records_per_s_lower": round(len(records) / from_submit), "records_per_s_upper": round(len(records) / from_running),
             "exact": cmp["exact"], "vertices": vertices}
@@ -149,9 +163,11 @@ def main() -> None:
     p.add_argument("--speed", type=float, default=10)
     p.add_argument("--label", default="")
     p.add_argument("--sink-flush-ms", type=int, default=0, help="0 = flush only before checkpoints / on full batch")
+    p.add_argument("--checkpoint-hold-ms", type=int, default=0, help="capacity: stall the windows sink at every checkpoint")
     args = p.parse_args()
     stack.up()
-    result = capacity(args.rate_per_service, args.duration_s, args.seed) if args.mode == "capacity" \
+    result = capacity(args.rate_per_service, args.duration_s, args.seed, args.checkpoint_hold_ms, args.label) \
+        if args.mode == "capacity" \
         else latency(args.speed, args.seed, args.duration_s, args.label, args.sink_flush_ms)
     out = ROOT / "results/raw/load_runs.jsonl"
     with open(out, "a") as f:
