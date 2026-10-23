@@ -64,9 +64,9 @@ dead-letter counts by reason, and every alert, including its floating-point scor
 
 | Recovery (failure → every task running on restored state) | Time |
 | --- | --- |
-| TaskManager SIGKILL, restarted after 3 s | 3.2–10.0 s |
-| Job cancel → resume from retained checkpoint | 4.9–8.1 s |
-| Sink database down for 8 s | 8.4–11.6 s from outage start |
+| TaskManager SIGKILL, restarted after 3 s | 7.3–12.1 s (failover noticed in 2.5–6.7 s) |
+| Job cancel → resume from retained checkpoint | 2.5–5.7 s |
+| Sink database down for 8 s | 8.5–10.1 s from outage start |
 
 **Scope of the claim.** Final table contents are exact. Duplicate writes of identical values during
 replay are expected. Not claimed: end-to-end exactly-once side effects, or survival of Kafka-log or

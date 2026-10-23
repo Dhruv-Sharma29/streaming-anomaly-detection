@@ -31,7 +31,7 @@ at-least-once argument, barely exercised.
 **Detection:** read the harness, not the result line. `run_once` in `eval/run_pipeline.py`.
 
 **Mitigation:** two crash modes. `--inflight` crashes while the input is still arriving (8/8
-exact, 145–497 sink writes past the last checkpoint replayed). `--mid-checkpoint` holds each
+exact, 36–566 sink writes past the last checkpoint replayed). `--mid-checkpoint` holds each
 checkpoint open after the sink has written its rows and crashes while one is in progress (6/6
 exact) ([03](03-recovery.md) § Idle, in-flight and mid-checkpoint crashes). What the harness still can't produce: Kafka broker
 or JobManager failure (no HA on one host).
@@ -103,8 +103,8 @@ Say:
   idle (including restores where the first record after recovery is very late), while input is
   still arriving, and inside a checkpoint whose rows were already written."
 - "At-least-once input plus idempotent upserts of deterministic values; final state is exact."
-- "Recovery 3.2–10.0 s after a TaskManager kill (dedicated timing runs), 4.9–8.1 s after a job
-  restore, 8.4–11.6 s from the start of an 8 s database outage; one host, local processes."
+- "Recovery 7.3–12.1 s after a TaskManager kill (failover noticed in 2.5–6.7 s), 2.5–5.7 s after a
+  job restore, 8.5–10.1 s from the start of an 8 s database outage; one host, local processes."
 
 Don't say:
 - "Exactly-once." Not end to end, and not for side effects.

@@ -37,8 +37,8 @@ evidence, and what is left. Status as of 2026-10-23. The last recorded runs are 
 ## Next, in order of what it would buy
 
 1. ~~**Crash during processing and inside a checkpoint.**~~ Done 2026-10-23 (`--inflight` 8/8,
-   `--mid-checkpoint` 6/6). Left over from it: find why the TaskManager failover detector hit its
-   120 s cap in 7 of 11 runs of that suite ([09](09-implementation-notes.md) § 11b).
+   `--mid-checkpoint` 6/6). Building it also turned up and fixed a JDBC driver bug and two harness
+   measurement bugs ([09](09-implementation-notes.md) § 11b–11d).
 2. **A backpressure run.** Throttle the sink (or slow PostgreSQL) until the ordered chain backs up,
    and check the run is still exact and that the sampler sees a non-zero ratio. This closes M6's
    "visible and bounded".

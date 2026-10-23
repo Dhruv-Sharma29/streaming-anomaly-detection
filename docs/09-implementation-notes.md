@@ -109,12 +109,38 @@ windows sink, sleeps after the pre-checkpoint flush has written its rows, holdin
 so the checkpoint open. With 0 nothing changes; the jar was rebuilt and all 30 suite runs and the
 Python/Java parity test pass on it. Production runs never set it.
 
-### 11b. TaskManager recovery timing was unreliable in the 2026-10-23 suite
+### 11b. TaskManager failover was detected through a metric that REST didn't reliably show (fixed)
 
-The failover detector in `crash()` (wait for `numRestarts` to rise, cap 120 s) gave 3.1 s to the cap
-for the same failure; 7 of 11 TaskManager runs hit the cap while their output was already exact. The
-suite ran next to two GPU training jobs. Not root-caused; the dedicated `tm-recovery-timing` runs stay
-the reference ([03](03-recovery.md) § Recovery time).
+The failover detector in `crash()` waited for the job's `numRestarts` metric to rise, capped at
+120 s. In the first 2026-10-23 suite it reported 3.1 s to the cap for the same failure, and 7 of 11
+TaskManager runs hit the cap, although the JobManager log shows those jobs restarting at the kill
+and running again on the new TaskManager about 4 s later. Two things combined. Polled through REST,
+the metric was not a reliable signal: a probe showed it rising only some seconds after the restart,
+and in the capped runs it never rose at all. And the early 3.1 s values were the counter rising from
+an unrelated restart (§ 11c), not from the kill. The detector now reads the job's own state
+timestamp: the first RESTARTING after the kill. In the final suite failover is noticed 2.5–6.7 s
+after the kill in all 11 TaskManager runs ([03](03-recovery.md) § Recovery time).
+
+### 11c. The first sink connection of a job could fail with "No suitable driver" (fixed)
+
+The JobManager logs of 2026-10-06 and 2026-10-23 show `SQLException: No suitable driver found for
+jdbc:postgresql://…` dozens of times: the job jar is loaded child-first, where `DriverManager`'s
+service discovery may not see the PostgreSQL driver, so a job's first connection could fail and the
+job restarted once, from the source, before doing anything. Results stayed exact (that is replay
+working), but "clean" runs were not failure-free. `UpsertSink` now loads `org.postgresql.Driver`
+explicitly before connecting, as Flink's own JDBC connector does. The final suite's JobManager log
+has 0 such errors.
+
+### 11d. REST views were cached for 3 s, the checkpoint interval (fixed)
+
+Flink caches the job, checkpoint and metric views served by REST for `web.refresh-interval`, 3 s by
+default, the same as the job's checkpoint interval. A poll could then lock onto one phase of the
+checkpoint cycle: in one suite two `--mid-checkpoint` runs saw no checkpoint in progress for 60 s
+although the JobManager log shows checkpoints taking 2 s of every 3. Cached job state also added up
+to a few seconds to every recovery time the harness measured. `infra/stack.py` now sets
+`web.refresh-interval: 500 ms` and `rest.cache.checkpoint-statistics.timeout: 100 ms`; this changes
+what REST reports, not what the job does. Recovery times recorded before this change are not
+comparable with the current ones.
 
 ### 12. "Backpressure bounded" is untested
 

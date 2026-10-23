@@ -46,7 +46,7 @@ Ordered by the milestone that forces each skill. "Done when" points at something
 
 | Skill | Why | Done when |
 |---|---|---|
-| Flink REST metrics: backpressure, busy ratio, `numRestarts` | Visible backpressure, honest recovery timing | `backpressure_sampler` in `eval/load.py`; `crash()` waits for `numRestarts` |
+| Flink REST views: backpressure, busy ratio, job state timestamps, and their caching (`web.refresh-interval`) | Visible backpressure, honest recovery timing | `backpressure_sampler` in `eval/load.py`; `crash()` reads the RESTARTING timestamp ([09](09-implementation-notes.md) § 11b, 11d) |
 | Latency vs flush-interval trade-off | Result staleness is set by the sink, not the job | The two latency runs in [05](05-evaluation.md) |
 
 ## Interview talking points, mapped to what was built

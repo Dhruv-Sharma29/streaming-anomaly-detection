@@ -74,27 +74,27 @@ or a crash at a random point would almost never put a very-late event first afte
 
 ## Recovery time
 
-Measured from the failure to "every task of the job is RUNNING on restored state". It covers the
-JobManager noticing the loss, which is bounded by the 10 s heartbeat timeout in `infra/stack.py`.
+Measured from the failure to "every task of the job is RUNNING on restored state", from the final
+2026-10-23 suite (`results/suite.log`, `results/suite-logs/NN.log`). For a TaskManager kill it
+includes the JobManager noticing the loss, read from the job's own state timestamp (entered
+RESTARTING after the kill), and the 3 s before the harness starts a new TaskManager.
 
-| Failure | Recovery | Source |
-| --- | --- | --- |
-| TaskManager SIGKILL, restarted after 3 s | 3.2, 10.0, 10.0 s | `results/raw/pipeline_runs.jsonl`, label `tm-recovery-timing` (seeds 17–19) |
-| same, during the demo | 9.4 s | `results/demo.log` |
-| Job cancel → resume from retained checkpoint | 8.0–8.1 s idle; 4.9–5.1 s in flight | `results/suite-logs/10–12,16,20–22,28–30.log` (2026-10-23) |
-| Sink database down for 8 s | 8.4 s idle; 11.5–11.6 s in flight, from outage start | `results/suite-logs/13,14,23,24.log` (2026-10-23) |
+| Failure | Recovery | Failover noticed | Source |
+| --- | --- | --- | --- |
+| TaskManager SIGKILL, restarted after 3 s | 7.3–12.1 s | 2.5–6.7 s after the kill | logs 06–09, 15, 17–19, 25–27 |
+| Job cancel → resume from retained checkpoint | 3.5–3.7 s idle; 2.5–5.7 s in flight or mid-checkpoint | — | logs 10–12, 16, 20–22, 28–30 |
+| Sink database down for 8 s | 8.5 s idle; 9.9–10.1 s in flight, from outage start | — | logs 13, 14, 23, 24 |
 
-The TaskManager timings in the 2026-10-23 suite are not usable: with the fixed timer (wait for
-`numRestarts` to rise, capped at 120 s), detected failover ranged from 3.1 s to the cap for the same
-failure, and 7 of 11 TaskManager runs hit the cap, while every run's output was already exact. The
-suite ran next to two GPU training jobs; the cause is not established. The three
-`tm-recovery-timing` runs (seeds 17–19) remain the reference; one later run, `portability-regression`
-(seed 3, same file), took 11.0 s. Next check: the JobManager log's restart timestamps for a capped run.
+**Earlier figures were measured through a 3 s cache.** Before 2026-10-23 the harness read job state
+through Flink's REST views, which are cached for `web.refresh-interval` (3 s by default); `infra/stack.py`
+now sets 500 ms. The old numbers (3.2–10.0 s for a TaskManager kill in the `tm-recovery-timing` runs,
+8.3–8.5 s for a job restore, 9.4 s in `results/demo.log`) therefore include up to a few seconds of
+cache delay, and the old TaskManager failover detector (the `numRestarts` metric) did not see the
+counter rise within its 120 s cap in 7 of 11 runs of one suite, although the JobManager log shows
+those jobs running again about 4 s after the kill ([09](09-implementation-notes.md) § 11b).
 
-The sink-outage figure is mostly the outage itself: 8 s of deliberate downtime plus restart.
-Whether the job actually failed over *during* the outage isn't recorded. The input is paused at
-that moment (next section), so the sink may have had nothing to write until the outage ended
-**[verify]** (`numRestarts` is not logged for this mode).
+The sink-outage figure is mostly the outage itself: 8 s of deliberate downtime plus restart. Whether
+the job failed over *during* the outage isn't recorded **[verify]**.
 
 ## Idle, in-flight and mid-checkpoint crashes
 
@@ -118,29 +118,29 @@ Each run records the state at the moment of the failure (`results/suite-logs/17�
 
 | Log | Seed | Failure | Cut | Checkpoint in progress | Producer running | Last checkpoint age | Sink writes before crash | Recovery (s) | Exact |
 |---|---|---|---|---|---|---|---|---|---|
-| 17 | 21 | TaskManager kill | 30% | 0 | yes | 0.27 s | 174 | 9.4 | yes |
-| 18 | 22 | TaskManager kill | 50% | 0 | yes | 0.99 s | 262 | 127.2 ‡ | yes |
-| 19 | 23 | TaskManager kill | 80% | 0 | yes | 0.55 s | 491 | 123.3 ‡ | yes |
-| 20 | 24 | job cancel + restore | 30% | 0 | yes | 0.8 s | 145 | 5.1 | yes |
-| 21 | 25 | job cancel + restore | 50% | 0 | yes | 0.49 s | 308 | 5.1 | yes |
-| 22 | 26 | job cancel + restore | 80% | 0 | yes | 1.32 s | 497 | 5.0 | yes |
-| 23 | 27 | sink database down 8 s | 40% | 0 | yes | 0.27 s | 253 | 11.6 | yes |
-| 24 | 28 | sink database down 8 s | 70% | 0 | yes | 2.19 s | 351 | 11.5 | yes |
+| 17 | 21 | TaskManager kill | 30% | 0 | yes | 2.9 s | 36 | 8.3 (3.5) | yes |
+| 18 | 22 | TaskManager kill | 50% | 0 | yes | 1.85 s | 222 | 9.4 (6.7) | yes |
+| 19 | 23 | TaskManager kill | 80% | 0 | yes | 2.78 s | 364 | 8.3 (3.1) | yes |
+| 20 | 24 | job cancel + restore | 30% | 0 | yes | 0.98 s | 141 | 3.6 | yes |
+| 21 | 25 | job cancel + restore | 50% | 0 | yes | 1.36 s | 268 | 5.7 | yes |
+| 22 | 26 | job cancel + restore | 80% | 0 | yes | 0.29 s | 566 | 2.5 | yes |
+| 23 | 27 | sink database down 8 s | 40% | 0 | yes | 1.73 s | 175 | 10.1 | yes |
+| 24 | 28 | sink database down 8 s | 70% | 0 | yes | 1.54 s | 407 | 9.9 | yes |
 
 | Log | Seed | Failure | Cut | Checkpoint in progress | Producer running | Last checkpoint age | Sink writes before crash | Recovery (s) | Exact |
 |---|---|---|---|---|---|---|---|---|---|
-| 25 | 31 | TaskManager kill | 30% | 1 | no | 1.0 s | 588 | 123.1 ‡ | yes |
-| 26 | 32 | TaskManager kill | 50% | 1 | no | 1.03 s | 619 | 123.4 ‡ | yes |
-| 27 | 33 | TaskManager kill | 80% | 1 | yes | 1.36 s | 535 | 123.1 ‡ | yes |
-| 28 | 34 | job cancel + restore | 30% | 1 | yes | 4.76 s | 17 | 8.1 | yes |
-| 29 | 35 | job cancel + restore | 50% | 1 | yes | none completed yet | 247 | 8.0 | yes |
-| 30 | 36 | job cancel + restore | 80% | 1 | yes | 1.2 s | 535 | 4.9 | yes |
+| 25 | 31 | TaskManager kill | 30% | 1 | yes | 1.12 s | 210 | 7.3 (4.5) | yes |
+| 26 | 32 | TaskManager kill | 50% | 1 | yes | 1.1 s | 382 | 8.3 (3.7) | yes |
+| 27 | 33 | TaskManager kill | 80% | 1 | yes | 2.67 s | 449 | 7.8 (2.9) | yes |
+| 28 | 34 | job cancel + restore | 30% | 1 | yes | 1.03 s | 217 | 3.1 | yes |
+| 29 | 35 | job cancel + restore | 50% | 1 | yes | 1.12 s | 340 | 3.1 | yes |
+| 30 | 36 | job cancel + restore | 80% | 1 | yes | 1.09 s | 567 | 3.1 | yes |
 
 All 14 are exact: windows, alerts, late-dropped ids and dead-letter counts match the reference. In
-the 8 in-flight runs the producer was still sending and 145–497 window writes were already in the
-sink. In all 6 mid-checkpoint runs a checkpoint was in progress with its rows written; in runs 25–26
-the wait for one outlasted the producer, so those two are mid-checkpoint but not mid-input.
-Recovery marked ‡ hit the failover detector's cap ([§ Recovery time](#recovery-time)).
+every run the producer was still sending at the failure, and 36–567 window writes were already in
+the sink. In all 6 mid-checkpoint runs a checkpoint was in progress with its rows written (found
+within 0.02–1.06 s of the cut). TaskManager recovery shows total time and, in brackets, when the
+failover was noticed.
 
 | Still not exercised | Why it matters | What would exercise it |
 | --- | --- | --- |

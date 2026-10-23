@@ -58,7 +58,7 @@ job is idle when it dies. Add `--inflight` to crash while the input is still arr
 uv run python -m eval.run_pipeline --seed 22 --crash taskmanager --at 0.5 --inflight
 ```
 
-## 4. The correctness suite (~30 minutes)
+## 4. The correctness suite (~15 minutes)
 
 ```bash
 eval/suite.sh
@@ -69,8 +69,8 @@ restores, 2 database outages), 8 in-flight (3 TaskManager kills, 3 job restores,
 and 6 mid-checkpoint (3 TaskManager kills, 3 job restores). It
 prints one `run_id … exact` line per run, or `FAILED: …` with the log's last line, and
 **overwrites** `results/suite-logs/NN.log`. Each run is capped at 900 s by `timeout`/`gtimeout`
-when available. The recorded pass ran from `20261023T102634Z` to `20261023T105651Z`, 31 minutes, of which
-about 14 were TaskManager runs waiting out the 120 s failover-detector cap (`results/suite.log`).
+when available. The recorded pass ran from `20261023T114036Z` to `20261023T115319Z` plus the last run, about
+13 minutes (`results/suite.log`).
 Pass condition: 30 × `"exact": true`. Then update
 [docs/05-evaluation.md](docs/05-evaluation.md) if any number moved.
 
