@@ -26,6 +26,7 @@ public class UpsertSink<T> implements Sink<T> {
     private final StatementBinder<T> binder;
     private final int batchSize;
     private final long flushIntervalMs;  // 0: flush only on full batch and before checkpoints
+    private long checkpointHoldMs;       // test hook, 0 in normal runs: see holdingCheckpoints
 
     public UpsertSink(String jdbcUrl, String sql, StatementBinder<T> binder, int batchSize) {
         this(jdbcUrl, sql, binder, batchSize, 0);
@@ -42,6 +43,17 @@ public class UpsertSink<T> implements Sink<T> {
         this.binder = binder;
         this.batchSize = batchSize;
         this.flushIntervalMs = flushIntervalMs;
+    }
+
+    /**
+     * Test hook for the mid-checkpoint crash runs (eval/run_pipeline.py --mid-checkpoint): after the
+     * pre-checkpoint flush has written its rows, wait this long before letting the barrier pass. The
+     * checkpoint stays in progress with its rows already in the database, so a crash in that window
+     * must be repaired by replay overwriting them. 0 (the default) changes nothing.
+     */
+    public UpsertSink<T> holdingCheckpoints(long ms) {
+        this.checkpointHoldMs = ms;
+        return this;
     }
 
     @Override
@@ -90,6 +102,14 @@ public class UpsertSink<T> implements Sink<T> {
                 executeBatch();
             } catch (SQLException e) {
                 throw new IOException("sink flush failed", e);
+            }
+            if (checkpointHoldMs > 0 && !endOfInput) {
+                try {
+                    Thread.sleep(checkpointHoldMs);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new IOException("interrupted while holding the checkpoint", e);
+                }
             }
         }
 

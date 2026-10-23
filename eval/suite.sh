@@ -35,3 +35,11 @@ run --seed 25 --crash job --at 0.5 --inflight --label job-restore-inflight
 run --seed 26 --crash job --at 0.8 --inflight --label job-restore-inflight
 run --seed 27 --crash postgres --at 0.4 --inflight --label sink-db-restart-inflight
 run --seed 28 --crash postgres --at 0.7 --inflight --label sink-db-restart-inflight
+# Mid-checkpoint failures: checkpoints are held open for 2 s after the sink has written its rows, and the
+# failure is injected only while one is in progress (eval/run_pipeline.py --mid-checkpoint).
+run --seed 31 --crash taskmanager --at 0.3 --mid-checkpoint --label tm-crash-mid-checkpoint
+run --seed 32 --crash taskmanager --at 0.5 --mid-checkpoint --label tm-crash-mid-checkpoint
+run --seed 33 --crash taskmanager --at 0.8 --mid-checkpoint --label tm-crash-mid-checkpoint
+run --seed 34 --crash job --at 0.3 --mid-checkpoint --label job-restore-mid-checkpoint
+run --seed 35 --crash job --at 0.5 --mid-checkpoint --label job-restore-mid-checkpoint
+run --seed 36 --crash job --at 0.8 --mid-checkpoint --label job-restore-mid-checkpoint

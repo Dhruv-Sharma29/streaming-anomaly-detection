@@ -5,12 +5,15 @@
     python -m eval.run_pipeline --seed 3 --crash job --at 0.5             # cancel job, resume from checkpoint
     python -m eval.run_pipeline --seed 4 --crash postgres --at 0.5        # sink database restarts
     python -m eval.run_pipeline --seed 5 --crash taskmanager --at 0.5 --inflight   # crash while input flows
+    python -m eval.run_pipeline --seed 6 --crash taskmanager --at 0.5 --mid-checkpoint   # crash inside a checkpoint
 
 By default the failure is injected 8 s after the input before the cut was produced, so the job is
 idle and a completed checkpoint covers everything it has seen. --inflight produces the whole input
 in the background and injects the failure while records are still arriving: records after the last
 completed checkpoint, some of them already written to the sink, have to be replayed. The run
-records the checkpoint state and the sink writes at the moment of the crash.
+records the checkpoint state and the sink writes at the moment of the crash. --mid-checkpoint is
+--inflight plus a checkpoint held open after the sink has written its rows (the job's test-only
+--checkpoint-hold-ms), and the failure is injected only once Flink reports a checkpoint in progress.
 
 Each run uses a fresh topic and consumer group. Comparison is exact: final windows, first-firing
 alerts, late-dropped event ids, dead-letter counts by reason. One JSON line per run goes to
@@ -50,13 +53,15 @@ def _flink_env() -> dict:
     return {**os.environ, "JAVA_HOME": str(stack.JAVA_HOME), "FLINK_CONF_DIR": str(stack.flink_conf_dir())}
 
 
-def submit(topic: str, group: str, from_checkpoint: str | None = None, sink_flush_ms: int = 0) -> str:
+def submit(topic: str, group: str, from_checkpoint: str | None = None, sink_flush_ms: int = 0,
+           checkpoint_hold_ms: int = 0) -> str:
     cmd = [str(FLINK), "run", "-d"]
     if from_checkpoint:
         cmd += ["-s", from_checkpoint]
     cmd += ["-c", "pipeline.StreamingJob", str(JAR), "--bootstrap", stack.BOOTSTRAP, "--topic", topic,
             "--group", group, "--jdbc-url", stack.JDBC_URL, "--constants", str(CONSTANTS_FILE),
-            "--checkpoint-ms", "3000", "--sink-flush-ms", str(sink_flush_ms), "--name", topic]
+            "--checkpoint-ms", "3000", "--sink-flush-ms", str(sink_flush_ms),
+            "--checkpoint-hold-ms", str(checkpoint_hold_ms), "--name", topic]
     out = subprocess.run(cmd, env=_flink_env(), capture_output=True, text=True, timeout=120)
     for line in out.stdout.splitlines():
         if "JobID" in line:
@@ -127,6 +132,17 @@ def checkpoint_state(job_id: str) -> dict:
             "last_completed_id": completed.get("id"),
             "since_last_completed_s": round((now_ms - completed["latest_ack_timestamp"]) / 1000, 2)
             if completed.get("latest_ack_timestamp") else None}
+
+
+def wait_checkpoint_in_progress(job_id: str, timeout_s: float = 60) -> float:
+    """Poll until a checkpoint is in progress; returns seconds waited."""
+    t0 = time.monotonic()
+    while time.monotonic() - t0 < timeout_s:
+        info = httpx.get(f"{stack.FLINK_URL}/jobs/{job_id}/checkpoints", timeout=5).json()
+        if info.get("counts", {}).get("in_progress", 0) > 0:
+            return time.monotonic() - t0
+        time.sleep(0.05)
+    raise RuntimeError("no checkpoint in progress")
 
 
 def wait_checkpoint(job_id: str, timeout_s: float = 60) -> str:
@@ -202,7 +218,7 @@ def wait_settled(expected: dict, expected_alerts: list[dict], timeout_s: float) 
 
 # --- crash injection ---------------------------------------------------------------------------
 
-def crash(kind: str, job_id: str, topic: str, group: str) -> tuple[str, dict]:
+def crash(kind: str, job_id: str, topic: str, group: str, checkpoint_hold_ms: int = 0) -> tuple[str, dict]:
     """Inject a failure and bring processing back. Returns (job id now running, details)."""
     t0 = time.monotonic()
     if kind == "taskmanager":
@@ -222,7 +238,7 @@ def crash(kind: str, job_id: str, topic: str, group: str) -> tuple[str, dict]:
     if kind == "job":
         checkpoint = wait_checkpoint(job_id)
         cancel(job_id)
-        new_id = submit(topic, group, from_checkpoint=checkpoint)
+        new_id = submit(topic, group, from_checkpoint=checkpoint, checkpoint_hold_ms=checkpoint_hold_ms)
         wait_running(new_id)
         return new_id, {"recovery_s": round(time.monotonic() - t0, 1), "restored_from": checkpoint}
     if kind == "postgres":
@@ -244,7 +260,8 @@ def cut_index(records: list[dict], at: float, before_very_late: bool) -> int:
 
 
 def run_once(seed: int, crash_kind: str | None, at: float, rate: float, duration_s: int, label: str,
-             before_very_late: bool = False, inflight: bool = False) -> dict:
+             before_very_late: bool = False, inflight: bool = False, mid_checkpoint: bool = False,
+             checkpoint_hold_ms: int = 2000) -> dict:
     run_id = f"{datetime.now(UTC):%Y%m%dT%H%M%SZ}-s{seed}-{crash_kind or 'clean'}-{uuid.uuid4().hex[:4]}"
     topic, group = f"events-{run_id}", f"pipeline-{run_id}"
     meta, records = generate(Config(seed=seed, duration_s=duration_s))
@@ -254,19 +271,22 @@ def run_once(seed: int, crash_kind: str | None, at: float, rate: float, duration
     stack.create_topic(topic, partitions=meta["config"]["partitions"])
     stack.truncate_tables()
     clean_slate()
-    job_id = submit(topic, group)
+    hold_ms = checkpoint_hold_ms if mid_checkpoint else 0
+    job_id = submit(topic, group, checkpoint_hold_ms=hold_ms)
     try:
         wait_running(job_id)
         check_ordering_chain(job_id)
         cut = cut_index(records, at, before_very_late) if crash_kind else len(records)
         crash_info = None
-        if crash_kind and inflight:
+        if crash_kind and (inflight or mid_checkpoint):
             with ThreadPoolExecutor(1) as pool:
                 producing = pool.submit(produce, records, topic, rate)
                 time.sleep(cut / rate)   # produce() paces at `rate`, so about `cut` records are out
+                waited = wait_checkpoint_in_progress(job_id) if mid_checkpoint else None
                 at_crash = {**checkpoint_state(job_id), "sink_window_writes": read_results()["window_writes"],
-                            "producer_running": not producing.done()}
-                job_id, crash_info = crash(crash_kind, job_id, topic, group)
+                            "producer_running": not producing.done(), "waited_for_checkpoint_s":
+                                round(waited, 2) if waited is not None else None}
+                job_id, crash_info = crash(crash_kind, job_id, topic, group, hold_ms)
                 crash_info = {**crash_info, "at_crash": at_crash}
                 produced = [producing.result()]
         else:
@@ -279,7 +299,8 @@ def run_once(seed: int, crash_kind: str | None, at: float, rate: float, duration
     finally:
         cancel(job_id)
     return {"run_id": run_id, "label": label, "seed": seed, "crash": crash_kind, "crash_at": at if crash_kind else None,
-            "cut_before_very_late": before_very_late, "inflight": inflight, "cut_index": cut,
+            "cut_before_very_late": before_very_late, "inflight": inflight or mid_checkpoint,
+            "mid_checkpoint": mid_checkpoint, "checkpoint_hold_ms": hold_ms, "cut_index": cut,
             "records": len(records), "produce": produced, "crash_info": crash_info, "settle_s": round(settle_s, 1),
             "window_writes": got["window_writes"], **cmp}
 
@@ -294,14 +315,17 @@ def main() -> None:
     p.add_argument("--label", default="")
     p.add_argument("--inflight", action="store_true",
                    help="inject the failure while the input is still being produced (no idle wait)")
+    p.add_argument("--mid-checkpoint", action="store_true",
+                   help="--inflight, with checkpoints held open after the sink writes; crash while one is in progress")
+    p.add_argument("--checkpoint-hold-ms", type=int, default=2000, help="how long --mid-checkpoint holds each checkpoint")
     p.add_argument("--before-very-late", action="store_true",
                    help="move the crash point to just before a very-late event (adversarial restore test)")
     args = p.parse_args()
     stack.up()
-    if args.inflight and (not args.crash or args.before_very_late):
-        p.error("--inflight needs --crash and does not combine with --before-very-late")
+    if (args.inflight or args.mid_checkpoint) and (not args.crash or args.before_very_late):
+        p.error("--inflight/--mid-checkpoint need --crash and do not combine with --before-very-late")
     result = run_once(args.seed, args.crash, args.at, args.rate, args.duration_s, args.label, args.before_very_late,
-                      args.inflight)
+                      args.inflight, args.mid_checkpoint, args.checkpoint_hold_ms)
     out = ROOT / "results/raw/pipeline_runs.jsonl"
     out.parent.mkdir(parents=True, exist_ok=True)
     with open(out, "a") as f:

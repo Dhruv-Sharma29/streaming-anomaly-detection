@@ -36,6 +36,7 @@ public class StreamingJob {
         Constants k = Constants.load(a.get("constants"));
         String jdbc = a.get("jdbc-url");
         long sinkFlushMs = Long.parseLong(a.getOrDefault("sink-flush-ms", "0"));
+        long checkpointHoldMs = Long.parseLong(a.getOrDefault("checkpoint-hold-ms", "0"));  // test hook only
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(Integer.parseInt(a.getOrDefault("parallelism", "2")));
@@ -96,7 +97,7 @@ public class StreamingJob {
                         + "last_written_at = clock_timestamp(), writes = windows.writes + 1",
                 (ps, r) -> { ps.setString(1, r.service); ps.setLong(2, r.windowStartMs); ps.setInt(3, r.requestCount);
                              ps.setInt(4, r.errorCount); ps.setDouble(5, r.latencyP95Ms); ps.setInt(6, r.queueDepthMax); },
-                200, sinkFlushMs)).uid("sink-windows").name("sink-windows");
+                200, sinkFlushMs).holdingCheckpoints(checkpointHoldMs)).uid("sink-windows").name("sink-windows");
 
         long windowMs = k.windowMs;
         onTime.getSideOutput(LATE).sinkTo(new UpsertSink<Event>(jdbc,
