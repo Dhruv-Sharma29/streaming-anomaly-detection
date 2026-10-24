@@ -1,0 +1,24 @@
+{
+ "checked_at": "2026-10-24T03:49:57+00:00",
+ "method": "Docker Hub registry API: image index (manifest list) per tag; not pulled or run (no container runtime here)",
+ "images": [
+  {
+   "image": "apache/kafka:4.3.1",
+   "index_digest": "sha256:77e3df9054047a88b520d0cc46e16696d3b22022e1d580aeccd2632df6532837",
+   "linux_arm64": true,
+   "linux_arm64_manifest": "sha256:c2b5172ab20d66381ec1729796a410fd611135821994526d4d42d2f256054af3"
+  },
+  {
+   "image": "flink:2.2.1",
+   "index_digest": "sha256:c5124717afe3829cc2d7c9b538bfe0b9d66cae3107a174d8f0e0392abe6375b8",
+   "linux_arm64": true,
+   "linux_arm64_manifest": "sha256:f0d58444a6396eda5214e252cee063cd7675740d469b91674d9fce32af5e3a9b"
+  },
+  {
+   "image": "postgres:16.15",
+   "index_digest": "sha256:9e2cf6287f25c3151f4c9421ccce2b17f3e60061c111a29165e0d2cdd9ff0a97",
+   "linux_arm64": true,
+   "linux_arm64_manifest": "sha256:d735d89e0f050dd5efa611ad633e44e06b526da77b04a7501cece311cd032375"
+  }
+ ]
+}

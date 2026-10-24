@@ -44,7 +44,8 @@ evidence, and what is left. Status as of 2026-10-23. The last recorded runs are 
 3. ~~**Run the non-stationary scenarios through the cluster.**~~ Done 2026-10-23: 4/4 exact, clean
    and with three crash modes ([05](05-evaluation.md) § Non-stationary traffic).
 4. **Containers**, once a container runtime is available: same stack, same suite. Needs
-   arm64-compatible images (SPEC.md).
+   arm64-compatible images (SPEC.md); those exist for the exact versions used, with digests in
+   `results/summary/arm64_images.json` (checked 2026-10-24, not run).
 5. **Cloud variant (optional)**: only with a spending cap, a resource inventory and a teardown
    script (SPEC.md, PLAN.md M6), and without assuming the managed service keeps the local
    guarantees.

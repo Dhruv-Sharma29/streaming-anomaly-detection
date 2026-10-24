@@ -53,7 +53,7 @@ Deviations from this plan, documented in [`docs/02-semantics.md`](docs/02-semant
 - **Exit:** expected results are unambiguous for every seed.
 
 ### M2 — Streaming baseline (1–2 weeks)
-- [ ] Verify arm64 images for Kafka, Flink, Postgres. (Not applicable as built: no container runtime on the host, so all three run as local arm64 processes; docs/09.)
+- [x] Verify arm64 images for Kafka, Flink, Postgres. (2026-10-24: linux/arm64 images exist for the exact versions used, kafka 4.3.1, flink 2.2.1, postgres 16.15, with index digests in `results/summary/arm64_images.json`; checked through the registry API, not pulled or run, because this host has no container runtime and the stack runs as local arm64 processes.)
 - [x] Aggregation job → Postgres. Compare output to reference for in-order and out-of-order streams.
 
 ### M3 — Failure correctness (2 weeks) — the core of the project
